@@ -1,2 +1,4 @@
-Lurker (a 4 hit point roguelike w/ deterministic stealth)
+Lurk (a 4 hp roguelike w/ deterministic stealth)
+
+![Lurk (screenshot)](screenshot.png)
 
