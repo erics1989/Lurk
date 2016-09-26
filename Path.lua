@@ -41,17 +41,13 @@ function Path.dist(srcs, validF, costF, max)
                 return dist[space1] < dist[space2]
             end
         )
-        if space1 == dst then
-            return Path.get_path(space1, prev)
-        else
-            for _, space2 in ipairs(adjacent(space1)) do
-                if validF(space2) then
-                    local d = dist[space1] + costF(space2, space1)
-                    if d < dist[space2] and d <= max then
-                        dist[space2] = d
-                        prev[space2] = space1
-                        table.insert(q, space2)
-                    end
+        for _, space2 in ipairs(adjacent(space1)) do
+            if validF(space2) then
+                local d = dist[space1] + costF(space1, space2)
+                if d < dist[space2] and d <= max then
+                    dist[space2] = d
+                    prev[space2] = space1
+                    table.insert(q, space2)
                 end
             end
         end
