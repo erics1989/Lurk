@@ -618,7 +618,6 @@ function state_one.draw()
             bcolor = { bcolor[1] + 64, bcolor[2], bcolor[3] }
             color = { color[1] + 64, color[2], color[3] }
         end
-        --[[
         -- person destinations
         for _, person in ipairs(_state.persons) do
             if person.dsts then
@@ -627,7 +626,6 @@ function state_one.draw()
                 end
             end
         end
-        ]]
         return bcolor, color, character
     end
     state_one.draw_map(highlight)

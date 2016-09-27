@@ -772,7 +772,8 @@ end
 
 -- person steps on a path to a space, return success
 function game.person_step_to(person, dst_f, valid_f, cost_f, stop)
-    local path = Path.dijk(person.space,
+    local path = Path.dijk(
+        person.space,
         dst_f,
         valid_f,
         cost_f,
@@ -814,7 +815,7 @@ end
 -- person steps on a path to the leader
 function game.person_step_to_friend(person, cost_f)
     local dst_f = function (space)
-        Hex.dist(space, person.friends[1].space) <= 1
+        return Hex.dist(space, person.friends[1].space) <= 1
     end
     return game.person_step_to(person, dst_f, game.space_stand, cost_f)
 end

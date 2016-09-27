@@ -130,7 +130,7 @@ function connect2(validF, connectF, n)
         -- connect them better
         local path = Path.astar(
             src,
-            { dst },
+            dst,
             function (space) return true end,
             function (space1, space2)
                 return validF(space2) and 1 or 2

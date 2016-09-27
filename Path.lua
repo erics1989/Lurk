@@ -151,10 +151,23 @@ end
 function Path.reverse(dst, prev)
     local path = {}
     while dst do
-        table.insert(path, 1, space)
+        table.insert(path, 1, dst)
         dst = prev[dst]
     end
     return path
+end
+
+function Path.print(path)
+    local strs = {}
+    if path[1] then
+        for _, space in ipairs(path) do
+            local str = string.format("(%d,%d)", space.x, space.y)
+            table.insert(strs, str)
+        end
+        print(table.concat(strs, ","))
+    else
+        print("no spaces")
+    end
 end
 
 return Path

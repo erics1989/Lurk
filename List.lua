@@ -113,7 +113,7 @@ function List.intersection(l1, l2)
     local f = function (v)
         return s1[v]
     end
-    return List.filter(f, l2)
+    return List.filter(l2, f)
 end
 
 return List
