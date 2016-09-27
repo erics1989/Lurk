@@ -127,7 +127,6 @@ _database.person_kobold_warrior = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return
@@ -255,7 +254,6 @@ _database.person_kobold_piker = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return
@@ -456,7 +454,6 @@ _database.person_ooze = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return
@@ -599,7 +596,6 @@ _database.person_kobold_archer = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return
@@ -700,7 +696,6 @@ _database.person_dhole = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return
@@ -796,7 +791,6 @@ _database.person_pirahna = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return
@@ -897,7 +891,6 @@ _database.person_bear = {
         end
 
         if  game.person_step_to_dsts(person, cost_f) or
-            game.person_step_to_preferred_terrain(person, cost_f) or
             game.person_rest(person)
         then
             return

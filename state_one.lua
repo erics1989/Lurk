@@ -412,10 +412,10 @@ end
 function state_one.path_init(dst)
     assert(_state.hero.space)
     assert(dst)
-    local valid = function (space)
+    local valid_f = function (space)
         return _state.visited[space] and game.space_stand(space)
     end
-    state_one.path = Path.astar(_state.hero.space, { dst }, valid)
+    state_one.path = Path.astar(_state.hero.space, dst, valid_f)
     if state_one.path then
         state_one.path_set = List.set(state_one.path)
     else

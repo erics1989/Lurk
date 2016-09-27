@@ -585,21 +585,21 @@ end
 -- person gets displaced (relocated nearby)
 function game.person_displace(person)
     assert(person.space)
-    local f = function (space)
+    local dst_f = function (space)
         return
             space ~= person.space and
             game.data(space.terrain).stand and
             not space.person
     end
     local spaces = List.filter(f, _state.spaces)
-    local path = Path.astar(person.space, spaces, game.space_stand)
+    local path = Path.dijk(person.space, dst_f, game.space_stand)
     if path then
         for i = #path, 2 do
             local dst = path[i]
             local src = path[i - 1]
             game.person_relocate(src.person, dst)
         end
-        return true    
+        return true
     else
         print("didn\'t displace")
         game.person_exit(person)
@@ -771,19 +771,15 @@ function game.person_get_objects(attacker)
 end
 
 -- person steps on a path to a space, return success
-function game.person_step_to(person, dsts, valid_f, cost_f, stop)
-    local path = Path.astar(
-        person.space,
-        dsts,
+function game.person_step_to(person, dst_f, valid_f, cost_f, stop)
+    local path = Path.dijk(person.space,
+        dst_f,
         valid_f,
         cost_f,
         stop
     )
     local space = path and path[2]
-    if  space and
-        game.data(space.terrain).stand and
-        not space.person
-    then
+    if space and game.space_vacant(space) then
         return game.person_step(person, space)
     end
 end
@@ -800,19 +796,14 @@ end
 
 -- person steps on a path to a position for a preferred action
 function game.person_preferred_action_step(person, space_fs, cost_f)
-    local f = function (space)
+    local dst_f = function (space)
         for _, space_f in ipairs(space_fs) do
             if space_f(space) then
                 return true
             end
         end
     end
-    return game.person_step_to(
-        person,
-        List.filter(f, _state.spaces),
-        game.space_stand,
-        cost_f
-    )
+    return game.person_step_to(person, dst_f, game.space_stand, cost_f)
 end
 
 -- get the person's leader
@@ -822,12 +813,10 @@ end
 
 -- person steps on a path to the leader
 function game.person_step_to_friend(person, cost_f)
-    return game.person_step_to(
-        person,
-        Hex.adjacent(person.friends[1].space),
-        game.space_stand,
-        cost_f
-    )
+    local dst_f = function (space)
+        Hex.dist(space, person.friends[1].space) <= 1
+    end
+    return game.person_step_to(person, dst_f, game.space_stand, cost_f)
 end
 
 -- person stores the positions of reachable enemies
@@ -836,7 +825,7 @@ function game.person_store_defender_positions(person, cost_f, defenders)
     for _, defender in ipairs(defenders) do
         local path = Path.astar(
             person.space,
-            { defender.space },
+            defender.space,
             game.space_stand,
             cost_f
         )
@@ -848,7 +837,12 @@ end
 
 -- person stores a random reachable space to wander to
 function game.person_store_wherever(person, cost_f)
-    local map = Path.dist({ person.space }, game.space_stand, cost_f, 8)
+    local map = Path.dist(
+        { person.space },
+        game.space_stand,
+        cost_f,
+        8 -- cost to dst < 8
+    )
     local f = function (space)
         local d = map[space]
         return 0 < d and d < math.huge
@@ -860,35 +854,11 @@ end
 
 -- person steps on a path to past-stored spaces
 function game.person_step_to_dsts(person, cost_f)
-    return game.person_step_to(
-        person,
-        person.dsts,
-        game.space_stand,
-        cost_f
-    )
-end
-
--- person steps to preferred terrain (off fire terrain, for example)
-function game.person_step_to_preferred_terrain(person, cost_f)
-    local f = function (space)
-        return
-            game.data(space.terrain).stand and
-            not space.person
+    local set = List.set(person.dsts)
+    local dst_f = function (space)
+        return set[space]
     end
-    local spaces = List.filter(f, Hex.adjacent(person.space))
-    if spaces[1] then
-        local f = function (space1, space2)
-            return
-                cost_f(person.space, space1) <
-                cost_f(person.space, space2)
-        end
-        local space = List.top(spaces, f)
-        if  cost_f(person.space, space) <
-            cost_f(person.space, person.space)
-        then
-            return game.person_step(person, space)
-        end
-    end
+    return game.person_step_to(person, dst_f, game.space_stand, cost_f)
 end
 
 -- place a status on a person
