@@ -541,7 +541,7 @@ _database.object_charm_of_verdure = {
                     game.data(space.terrain).stand and
                     not game.data(space.terrain).water
             end
-            local spaces = List.filter(f, _state.spaces)
+            local spaces = List.filter(_state.spaces, f)
             for _, space in ipairs(spaces) do
                 game.terrain_exit(space.terrain)
                 local terrain = game.data_init("terrain_tree")

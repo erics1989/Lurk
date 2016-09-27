@@ -198,7 +198,7 @@ _database.branch_zero = {
                     game.data(space.terrain).plant and
                     game.rand1(100) <= 25
             end
-            for _, space in ipairs(List.filter(f, _state.spaces)) do
+            for _, space in ipairs(List.filter(_state.spaces, f)) do
                 local terrain = game.data_init("terrain_tree")
                 game.terrain_enter(terrain, space)
             end
@@ -209,11 +209,11 @@ _database.branch_zero = {
                     game.data(space.terrain).stand and
                     not game.data(space.terrain).water
             end
-            local spaces1 = List.filter(f, _state.spaces)
+            local spaces1 = List.filter(_state.spaces, f)
             local f = function (space)
                 return game.data(space.terrain).water
             end
-            local spaces2 = List.filter(f, _state.spaces)
+            local spaces2 = List.filter(_state.spaces, f)
             local spaces3 = _state.spaces
             if  0.40 <= #spaces1 / #_state.spaces and
                 0.02 <= #spaces2 / #_state.spaces
@@ -262,7 +262,7 @@ _database.branch_zero = {
                 game.data(space.terrain).water and
                 game.rand1(100) <= 10
         end
-        for _, space in ipairs(List.filter(f, _state.spaces)) do
+        for _, space in ipairs(List.filter(_state.spaces, f)) do
             local person = game.data_init("person_pirahna")
             game.person_enter(person, space)
         end
@@ -272,7 +272,7 @@ _database.branch_zero = {
         for i = 1, _database.branch_zero[depth].encounter_count do
             local str = encounters[game.rand1(#encounters)]
             local encounter = _database[str]
-            local spaces = List.filter(encounter.valid, _state.spaces)
+            local spaces = List.filter(_state.spaces, encounter.valid)
             if spaces[1] then
                 local space = spaces[game.rand1(#spaces)]
                 encounter.init(space)
@@ -284,14 +284,14 @@ _database.branch_zero = {
         for i = 1, 4 do
             local str = treasures[game.rand1(#treasures)]
             local spaces = List.filter(
+                _state.spaces,
                 function (space) 
                     return
                         game.data(space.terrain).stand and
                         not game.data(space.terrain).water and
                         not space.dst and
                         not space.object
-                end,
-                _state.spaces
+                end
             )
             local space = spaces[game.rand1(#spaces)]
             game.object_enter(game.data_init(str), space)

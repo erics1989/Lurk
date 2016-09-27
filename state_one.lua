@@ -531,7 +531,7 @@ function state_one.process_con_map()
             not game.person_sense(person, _state.hero) and
             person.faction ~= _state.hero.faction
     end
-    local persons = List.filter(f, _state.persons)
+    local persons = List.filter(_state.persons, f)
     for _, person in ipairs(persons) do
         local dist = game.person_person_per_dist(person, _state.hero)
         local spaces = Hex.range(person.space, dist)
@@ -555,11 +555,11 @@ function state_one.process_threaten_map()
             person.faction ~= _state.hero.faction and
             game.data(person).threaten
     end
-    local persons = List.filter(f, _state.persons)
+    local persons = List.filter(_state.persons, f)
     local f = function (space)
         return game.space_stand(space) and _state.visited[space]
     end
-    local spaces = List.filter(f, _state.spaces)
+    local spaces = List.filter(_state.spaces, f)
     for _, person in ipairs(persons) do
         for _, space in ipairs(spaces) do
             local f = game.data(person).threaten

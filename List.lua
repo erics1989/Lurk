@@ -3,118 +3,117 @@
 
 local List = {}
 
-function List.contains(L, v1)
-    assert(L and v1)
-    for i, v2 in ipairs(L) do
+function List.contains(l, v1)
+    assert(l and v1)
+    for i, v2 in ipairs(l) do
         if v2 == v1 then
             return i
         end
     end
 end
 
-function List.delete(L, v)
-    assert(L and v)
-    local i = List.contains(L, v)
+function List.delete(l, v)
+    assert(l and v)
+    local i = List.contains(l, v)
     if i then
-        return table.remove(L, i)
+        return table.remove(l, i)
     end
 end
 
-function List.copy(L1)
-    local L2 = {}
-    for i, v in ipairs(L1) do
-        L2[i] = v
+function List.copy(l1)
+    local l2 = {}
+    for i, v in ipairs(l1) do
+        l2[i] = v
     end
-    return L2
+    return l2
 end
 
-function List.concat(L1, L2)
-    local L3 = List.copy(L1)
-    List.extend(L3, L2)
-    return L3
+function List.concat(l1, l2)
+    local l3 = List.copy(l1)
+    List.extend(l3, l2)
+    return l3
 end
 
-function List.extend(L1, L2)
-    for _, v in ipairs(L2) do
-        table.insert(L1, v)
+function List.extend(l1, l2)
+    for _, v in ipairs(l2) do
+        table.insert(l1, v)
     end
-    return L1
+    return l1
 end
 
-function List.top(L, sortF)
-    assert(L and sortF)
-    local top = L[1]
-    for i, v in ipairs(L) do
-        if sortF(v, top) then
+function List.top(l, compare_f)
+    assert(l and compare_f)
+    local top = l[1]
+    for i, v in ipairs(l) do
+        if compare_f(v, top) then
             top = v
         end
     end
     return top
 end
 
-function List.pop_top(L, sortF)
-    assert(L and sortF)
-    local top_i, top_v = 1, L[1]
-    for i, v in ipairs(L) do
-        if sortF(v, top_v) then
+function List.pop_top(l, compare_f)
+    assert(l and compare_f)
+    local top_i, top_v = 1, l[1]
+    for i, v in ipairs(l) do
+        if compare_f(v, top_v) then
             top_i, top_v = i, v
         end
     end
-    return table.remove(L, top_i)
+    return table.remove(l, top_i)
 end
 
-function List.set(L)
+function List.set(l)
     local set = {}
-    for _, v in ipairs(L) do
+    for _, v in ipairs(l) do
         set[v] = true
     end
     return set
 end
 
-function List.extend(L1, L2)
-    for _, v in ipairs(L2) do
-        table.insert(L1, v)
+function List.extend(l1, l2)
+    for _, v in ipairs(l2) do
+        table.insert(l1, v)
     end
 end
 
-function List.map(F, L1)
-    local L2 = {}
-    for i, v in ipairs(L1) do
-        L2[i] = F(v)
+function List.map(l1, f)
+    local l2 = {}
+    for i, v in ipairs(l1) do
+        l2[i] = f(v)
     end
-    return L2
+    return l2
 end
 
-function List.filter(F, L1)
-    local L2 = {}
-    for i, v in ipairs(L1) do
-        if F(v) then
-            table.insert(L2, v)
+function List.filter(l1, f)
+    local l2 = {}
+    for i, v in ipairs(l1) do
+        if f(v) then
+            table.insert(l2, v)
         end
     end
-    return L2
+    return l2
 end
 
-function List.reduce(F, L, init)
-    local x = init
-    for _, v in ipairs(L) do
-        if x then
-            x = F(x, v)
+function List.fold(l, f, acc)
+    for _, v in ipairs(l) do
+        if acc then
+            acc = f(x, v)
         else
-            x = v
+            acc = v
         end
     end
-    return x
+    return acc
 end
 
-function List.intersection(L1, L2)
-    assert(L1, L2)
-    local L3 = {}
-    local S1 = List.set(L1)
+function List.intersection(l1, l2)
+    assert(l1, l2)
+    local l3 = {}
+    local s1 = List.set(l1)
     local f = function (v)
-        return S1[v]
+        return s1[v]
     end
-    return List.filter(f, L2)
+    return List.filter(f, l2)
 end
 
 return List

@@ -73,7 +73,7 @@ function connect1(validF, connectF)
     assert(validF)
     assert(connectF)
     -- get a valid space
-    local space1 = List.filter(validF, _state.spaces)[1]
+    local space1 = List.filter(_state.spaces, validF)[1]
     assert(space1)
     while true do
         -- flood fill to find connected/disconnected valid spaces
@@ -147,7 +147,7 @@ end
 -- gets 2 distant spaces
 function get_distant_spaces(validF)
     assert(validF)
-    local spaces = List.filter(validF, _state.spaces)
+    local spaces = List.filter(_state.spaces, validF)
     assert(spaces[1])
     local space1 = spaces[game.rand1(#spaces)]
     local dist = Path.dist({ space1 }, validF)

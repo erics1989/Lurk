@@ -9,7 +9,7 @@ local function adjacent(space)
 end
 
 -- default cost between adjacent spaces
-local function d_cost(space1, space2)
+local function d_cost_f(space1, space2)
     return 1
 end
 
@@ -19,9 +19,9 @@ local function astar_heuristic(space1, space2)
 end
 
 -- bfs distance map
-function Path.dist(srcs, valid_f, cost_f, max)
-    cost_f = cost_f or d_cost
-    max = max or math.huge
+function Path.dist(srcs, valid_f, cost_f, stop)
+    cost_f = cost_f or d_cost_f
+    stop = stop or math.huge
     local dist = {}
     local prev = {}
     for _, space in ipairs(_state.spaces) do
@@ -44,7 +44,7 @@ function Path.dist(srcs, valid_f, cost_f, max)
         for _, space2 in ipairs(adjacent(space1)) do
             if valid_f(space2) then
                 local d = dist[space1] + cost_f(space1, space2)
-                if d < dist[space2] and d <= max then
+                if d < dist[space2] and d <= stop then
                     dist[space2] = d
                     prev[space2] = space1
                     table.insert(q, space2)
@@ -56,17 +56,19 @@ function Path.dist(srcs, valid_f, cost_f, max)
 end
 
 -- dijkstra's
-function Path.dijk(src, dst_f, valid_f, cost_f, max)
-    cost_f = cost_f or d_cost
-    max = max or math.huge
+function Path.dijk(src, dst_f, valid_f, cost_f, stop)
+    cost_f = cost_f or d_cost_f
+    stop = stop or math.huge
     local dist = {}
     local prev = {}
     for _, space in ipairs(_state.spaces) do
         dist[space] = math.huge
     end
     local q = {}
-    dist[src] = 0
-    table.insert(q, src)
+    if valid_f(src) then
+        dist[src] = 0
+        table.insert(q, src)
+    end
     while q[1] do
         local space1 = List.pop_top(
             q,
@@ -80,7 +82,7 @@ function Path.dijk(src, dst_f, valid_f, cost_f, max)
             for _, space2 in ipairs(adjacent(space1)) do
                 if valid_f(space2) then
                     local d = dist[space1] + cost_f(space1, space2)
-                    if d < dist[space2] and d <= max then
+                    if d < dist[space2] and d <= stop then
                         dist[space2] = d
                         prev[space2] = space1
                         table.insert(q, space2)
@@ -92,9 +94,9 @@ function Path.dijk(src, dst_f, valid_f, cost_f, max)
 end
 
 -- A*
-function Path.astar(src, dst, valid_f, cost_f, max)
-    cost_f = cost_f or d_cost
-    max = max or math.huge
+function Path.astar(src, dst, valid_f, cost_f, stop)
+    cost_f = cost_f or d_cost_f
+    stop = stop or math.huge
     local dist = {}
     local dist_heuristic = {}
     local prev = {}
@@ -103,9 +105,11 @@ function Path.astar(src, dst, valid_f, cost_f, max)
         dist_heuristic[space] = math.huge
     end
     local q = {}
-    dist[src] = 0
-    dist_heuristic[src] = astar_heuristic(src, dst)
-    table.insert(q, src)
+    if valid_f(src) then
+        dist[src] = 0
+        dist_heuristic[src] = astar_heuristic(src, dst)
+        table.insert(q, src)
+    end
     while q[1] do
         local space1 = List.pop_top(
             q,
@@ -119,7 +123,7 @@ function Path.astar(src, dst, valid_f, cost_f, max)
             for _, space2 in ipairs(adjacent(space1)) do
                 if valid_f(space2) then
                     local d = dist[space1] + cost_f(space1, space2)
-                    if d < dist[space2] and d <= max then
+                    if d < dist[space2] and d <= stop then
                         dist[space2] = d
                         dist_heuristic[space2] =
                             d + astar_heuristic(space2, dst)

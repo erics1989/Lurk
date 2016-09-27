@@ -94,7 +94,7 @@ function game.branch_enter(branch)
                 space.dst.name == prev.name and
                 space.dst.depth == prev.depth
         end
-        local stairs = List.filter(f, _state.spaces)[1]
+        local stairs = List.filter(_state.spaces, f)[1]
         game.person_enter(_state.hero, stairs)
     else
         -- hearts +1
@@ -591,7 +591,7 @@ function game.person_displace(person)
             game.data(space.terrain).stand and
             not space.person
     end
-    local spaces = List.filter(f, _state.spaces)
+    local spaces = List.filter(_state.spaces, f)
     local path = Path.dijk(person.space, dst_f, game.space_stand)
     if path then
         for i = #path, 2 do
@@ -653,7 +653,7 @@ function game.person_teleport(person)
             not space.dst and
             not space.person
     end
-    local dst = List.filter(f, _state.spaces)[1]
+    local dst = List.filter(_state.spaces, f)[1]
     game.person_relocate(person, dst)
 end
 
@@ -759,7 +759,7 @@ function game.person_get_defenders(attacker)
             defender.faction ~= attacker.faction and
             game.person_sense(attacker, defender)
     end
-    return List.filter(f, _state.persons)
+    return List.filter(_state.persons, f)
 end
 
 -- get objects visible to the person
@@ -767,7 +767,7 @@ function game.person_get_objects(attacker)
     local f = function (defender)
         return game.person_sense(attacker, defender)
     end
-    return List.filter(f, _state.objects)
+    return List.filter(_state.objects, f)
 end
 
 -- person steps on a path to a space, return success
@@ -847,7 +847,7 @@ function game.person_store_wherever(person, cost_f)
         local d = map[space]
         return 0 < d and d < math.huge
     end
-    local spaces = List.filter(f, _state.spaces)
+    local spaces = List.filter(_state.spaces, f)
     local dst = spaces[game.rand2(#spaces)]
     person.dsts = { dst }
 end
@@ -1142,7 +1142,7 @@ function game.object_displace(object)
             game.data(space.terrain).stand and
             not space.object
     end
-    local spaces = List.filter(f, _state.spaces)
+    local spaces = List.filter(_state.spaces, f)
     local path = Path.astar(object.space, spaces, game.space_stand)
     if path then
         for i = #path, 2 do

@@ -10,13 +10,13 @@ function state_aim.init(verb, object)
     -- create a set of valid spaces
     state_aim.valid = {}
     local spaces = List.filter(
+        _state.spaces,
         function (space)
             return
                 state_one.fov[space] and
                 verb.range(_state.hero, state_aim.object, space)
 
-        end,
-        _state.spaces
+        end
     )
     for _, space in ipairs(spaces) do
         state_aim.valid[space] = true
