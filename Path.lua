@@ -136,17 +136,6 @@ function Path.astar(src, dst, valid_f, cost_f, stop)
     end
 end
 
--- generate a path w/ path data
--- deprecated
-function Path.get_path(space, prev)
-    local spaces = {}
-    while space do
-        table.insert(spaces, space)
-        space = prev[space]
-    end
-    return spaces
-end
-
 -- TODO optimize: use dist to insert backwards
 function Path.reverse(dst, prev)
     local path = {}
@@ -155,19 +144,6 @@ function Path.reverse(dst, prev)
         dst = prev[dst]
     end
     return path
-end
-
-function Path.print(path)
-    local strs = {}
-    if path[1] then
-        for _, space in ipairs(path) do
-            local str = string.format("(%d,%d)", space.x, space.y)
-            table.insert(strs, str)
-        end
-        print(table.concat(strs, ","))
-    else
-        print("no spaces")
-    end
 end
 
 return Path

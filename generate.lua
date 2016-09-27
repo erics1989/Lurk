@@ -101,13 +101,13 @@ function connect1(validF, connectF)
                 function (space) return true end
             )
             -- get the closest disconnected space, and connect it
-            local src = List.top(
+            local dst = List.top(
                 disconnected,
                 function (space1, space2)
                     return dist[space1] < dist[space2]
                 end
             )
-            local path = Path.get_path(src, prev)
+            local path = Path.reverse(dst, prev)
             for _, space in ipairs(path) do
                 if not validF(space) then
                     connectF(space)
