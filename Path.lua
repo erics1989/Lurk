@@ -28,26 +28,24 @@ function Path.dist(srcs, valid_f, cost_f, stop)
         dist[space] = math.huge
     end
     local q = {}
-    for _, space in ipairs(srcs) do
-        if valid_f(space) then
-            dist[space] = 0
-            table.insert(q, space)
+    local cf = function (space1, space2)
+        return dist[space1] < dist[space2]
+    end
+    for _, src in ipairs(srcs) do
+        if valid_f(src) then
+            dist[src] = 0
+            List.p_enqueue(q, src, cf)
         end
     end
     while q[1] do
-        local space1 = List.pop_top(
-            q, 
-            function (space1, space2)
-                return dist[space1] < dist[space2]
-            end
-        )
+        local space1 = List.p_dequeue(q, cf)
         for _, space2 in ipairs(adjacent(space1)) do
             if valid_f(space2) then
                 local d = dist[space1] + cost_f(space1, space2)
                 if d < dist[space2] and d <= stop then
                     dist[space2] = d
                     prev[space2] = space1
-                    table.insert(q, space2)
+                    List.p_enqueue(q, space2, cf)
                 end
             end
         end
@@ -65,17 +63,15 @@ function Path.dijk(src, dst_f, valid_f, cost_f, stop)
         dist[space] = math.huge
     end
     local q = {}
+    local cf = function (space1, space2)
+        return dist[space1] < dist[space2]
+    end
     if valid_f(src) then
         dist[src] = 0
-        table.insert(q, src)
+        List.p_enqueue(q, src, cf)
     end
     while q[1] do
-        local space1 = List.pop_top(
-            q,
-            function (space1, space2)
-                return dist[space1] < dist[space2]
-            end
-        )
+        local space1 = List.p_dequeue(q, cf)
         if dst_f(space1) then
             return Path.reverse(space1, prev)
         else
@@ -85,7 +81,7 @@ function Path.dijk(src, dst_f, valid_f, cost_f, stop)
                     if d < dist[space2] and d <= stop then
                         dist[space2] = d
                         prev[space2] = space1
-                        table.insert(q, space2)
+                        List.p_enqueue(q, space2, cf)
                     end
                 end
             end
@@ -105,18 +101,16 @@ function Path.astar(src, dst, valid_f, cost_f, stop)
         dist_heuristic[space] = math.huge
     end
     local q = {}
+    local cf = function (space1, space2)
+        return dist_heuristic[space1] < dist_heuristic[space2]
+    end
     if valid_f(src) then
         dist[src] = 0
         dist_heuristic[src] = astar_heuristic(src, dst)
-        table.insert(q, src)
+        List.p_enqueue(q, src, cf)
     end
     while q[1] do
-        local space1 = List.pop_top(
-            q,
-            function (space1, space2)
-                return dist_heuristic[space1] < dist_heuristic[space2]
-            end
-        )
+        local space1 = List.p_dequeue(q, cf)
         if space1 == dst then
             return Path.reverse(space1, prev)
         else
@@ -128,7 +122,7 @@ function Path.astar(src, dst, valid_f, cost_f, stop)
                         dist_heuristic[space2] =
                             d + astar_heuristic(space2, dst)
                         prev[space2] = space1
-                        table.insert(q, space2)
+                        List.p_enqueue(q, space2, cf)
                     end
                 end
             end
@@ -136,7 +130,6 @@ function Path.astar(src, dst, valid_f, cost_f, stop)
     end
 end
 
--- TODO optimize: use dist to insert backwards
 function Path.reverse(dst, prev)
     local path = {}
     while dst do

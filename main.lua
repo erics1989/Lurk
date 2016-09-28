@@ -1,5 +1,6 @@
 
 binser = require("lib/binser")
+inspect = require("lib/inspect")
 
 List = require("List")
 Path = require("Path")
