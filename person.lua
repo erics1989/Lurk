@@ -66,7 +66,7 @@ _database.person_kobold_warrior = {
         local object = game.data_init("object_machete")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return Hex.dist(person.space, space) <= 1
@@ -77,19 +77,18 @@ _database.person_kobold_warrior = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
+            local cost = 1
             if  game.data(dst.terrain).fire or
                 game.data(dst.terrain).water
             then
-                return math.huge
+                cost = cost + math.huge
             end
-            local cost = 1
             if  dst.person and
                 dst.person ~= person and
-                person.sense[src.person]
+                person.sense[dst.person]
             then
                 cost = cost + dst.person.here
             end
-
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
                     cost = cost + 4
@@ -97,9 +96,11 @@ _database.person_kobold_warrior = {
             end
             return cost
         end
-        if defenders[1] then
+
+        -- attack defenders
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local spaceF = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -108,29 +109,27 @@ _database.person_kobold_warrior = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { spaceF }) or
-                game.person_preferred_action_step(person, { spaceF }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+
+        -- step to friend 1
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end
 }
 
@@ -146,7 +145,7 @@ _database.person_kobold_piker = {
         local object = game.data_init("object_spear")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return
@@ -171,19 +170,18 @@ _database.person_kobold_piker = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
+            local cost = 1
             if  game.data(dst.terrain).fire or
                 game.data(dst.terrain).water
             then
-                return math.huge
+                cost = cost + math.huge
             end
-            local cost = 1
             if  dst.person and
                 dst.person ~= person and
-                person.sense[src.person]
+                person.sense[dst.person]
             then
                 cost = cost + dst.person.here
             end
-
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
                     cost = cost + 4
@@ -191,25 +189,26 @@ _database.person_kobold_piker = {
             end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local f1 = function (space)
+            local space_stab_f = function (space)
+                return
+                    game.space_stand(space) and
+                    not game.data(space.terrain).water and
+                    (
+                        not space.person or
+                        not person.sense[space.person] or
+                        person == space.person
+                    )
+            end
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if  Hex.dist(space, defender.space) == 2 and
                         Hex.axis(space, defender.space) and
                         not game.obstructed(
                             space,
                             defender.space,
-                            function (space)
-                                return
-                                    game.data(space.terrain).stand and
-                                    not game.data(space.terrain).water and
-                                    (
-                                        not space.person or
-                                        not person.sense[space.person] or
-                                        person == space.person
-                                    )
-                            end
+                            space_stab_f
                         )
                     then
                         return function ()
@@ -225,8 +224,6 @@ _database.person_kobold_piker = {
                         end
                     end
                 end
-            end
-            local f2 = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -235,29 +232,26 @@ _database.person_kobold_piker = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { f1, f2 }) or
-                game.person_preferred_action_step(person, { f1, f2 }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end
 }
 
@@ -273,7 +267,7 @@ _database.person_skeleton_warrior = {
         local object = game.data_init("object_machete")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return Hex.dist(person.space, space) <= 1
@@ -284,15 +278,15 @@ _database.person_skeleton_warrior = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
+            local cost = 1
             if  game.data(dst.terrain).fire or
                 game.data(dst.terrain).water
             then
-                return math.huge
+                cost = cost + math.huge
             end
-            local cost = 1
             if  dst.person and
                 dst.person ~= person and
-                person.sense[src.person]
+                person.sense[dst.person]
             then
                 cost = cost + dst.person.here
             end
@@ -303,9 +297,9 @@ _database.person_skeleton_warrior = {
             end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local spaceF = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -314,41 +308,25 @@ _database.person_skeleton_warrior = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { spaceF }) then
-                print("preferred_action")
-                return
-            end
-            if game.person_preferred_action_step(person, { spaceF }, cost_f) then
-                print("preferred_action_step")
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            print("step_to_friend")
-            return
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
             game.person_store_wherever(person, cost_f)
         end
-
-        if  game.person_step_to_dsts(person, cost_f) then
-            print("step_to_dsts")
-            return
-
-        elseif game.person_step_to_preferred_terrain(person, cost_f) then
-            print("step_to_preferred_terrain")
-            return
-
-        elseif game.person_rest(person) then
-            print("rest")
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end,
     person_die = function (person)
         local object = game.data_init("object_bones")
@@ -391,7 +369,7 @@ _database.person_ooze = {
     init = function (person)
         game.person_setup(person)
         person.size = 2
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return Hex.dist(person.space, space) <= 1
@@ -405,17 +383,17 @@ _database.person_ooze = {
         end
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
+            local cost = 1
             if  game.data(dst.terrain).fire or
                 game.data(dst.terrain).water
             then
-                return math.huge
+                cost = cost + math.huge
             end
-            local cost = 1
             if  dst.person and
                 dst.person ~= person and
                 person.sense[dst.person]
             then
-                cost = cost + 2*dst.person.here
+                cost = cost + dst.person.here
             end
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
@@ -424,9 +402,9 @@ _database.person_ooze = {
             end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local f = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -435,29 +413,25 @@ _database.person_ooze = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { f }) or
-                game.person_preferred_action_step(person, { f }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end,
     person_die = function (person)
         if 2 <= person.size then
@@ -500,7 +474,7 @@ _database.person_kobold_archer = {
         local object = game.data_init("object_shortbow")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-        person.dsts = {}
+        person.interests = {}
     end,
     act = function (person)
         game.person_act(person)
@@ -530,17 +504,17 @@ _database.person_kobold_archer = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
+            local cost = 1
             if  game.data(dst.terrain).fire or
                 game.data(dst.terrain).water
             then
-                return math.huge
+                cost = cost + math.huge
             end
-            local cost = 1
             if  dst.person and
                 dst.person ~= person and
                 person.sense[dst.person]
             then
-                cost = cost + 2*dst.person.here                
+                cost = cost + dst.person.here
             end
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
@@ -549,9 +523,9 @@ _database.person_kobold_archer = {
             end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local spaceF = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     local d = Hex.dist(space, defender.space)
                     if  2 <= d and d <= 4 and
@@ -576,30 +550,25 @@ _database.person_kobold_archer = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { spaceF }) or
-                game.person_preferred_action_step(person, { spaceF }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end
 }
 
@@ -635,7 +604,7 @@ _database.person_dhole = {
         game.person_setup(person)
         local status = game.data_init("status_acute_senses")
         game.person_status_enter(person, status)
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return Hex.dist(person.space, space) <= 1
@@ -646,19 +615,18 @@ _database.person_dhole = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
+            local cost = 1
             if  game.data(dst.terrain).fire or
                 game.data(dst.terrain).water
             then
-                return math.huge
+                cost = cost + math.huge
             end
-            local cost = 1
             if  dst.person and
                 dst.person ~= person and
-                person.sense[src.person]
+                person.sense[dst.person]
             then
                 cost = cost + dst.person.here
             end
-
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
                     cost = cost + 4
@@ -666,9 +634,9 @@ _database.person_dhole = {
             end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local spaceF = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -677,29 +645,25 @@ _database.person_dhole = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { spaceF }) or
-                game.person_preferred_action_step(person, { spaceF }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end
 }
 
@@ -733,7 +697,7 @@ _database.person_pirahna = {
     },
     init = function (person)
         game.person_setup(person)
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return Hex.dist(person.space, space) <= 1
@@ -744,15 +708,15 @@ _database.person_pirahna = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
-            if not game.data(dst.terrain).water then
-                return math.huge
-            end
             local cost = 1
+            if not game.data(dst.terrain).water then
+                cost = cost + math.huge
+            end
             if  dst.person and
                 dst.person ~= person and
                 person.sense[dst.person]
             then
-                cost = cost + 2*dst.person.here
+                cost = cost + dst.person.here
             end
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
@@ -761,9 +725,9 @@ _database.person_pirahna = {
             end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local spaceF = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -772,29 +736,25 @@ _database.person_pirahna = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { spaceF }) or
-                game.person_preferred_action_step(person, { spaceF }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end
 }
 
@@ -829,7 +789,7 @@ _database.person_bear = {
     init = function (person)
         game.person_setup(person)
         person.hp = 4
-        person.dsts = {}
+        person.interests = {}
     end,
     threaten = function (person, space)
         return Hex.dist(person.space, space) <= 1
@@ -840,30 +800,28 @@ _database.person_bear = {
     person_act = function (person)
         local defenders = game.person_get_defenders(person)
         local cost_f = function (src, dst)
-            if  game.data(dst.terrain).fire then
-                return math.huge
-            end
             local cost = 1
+            if  game.data(dst.terrain).fire or
+                game.data(dst.terrain).water
+            then
+                cost = cost + math.huge
+            end
             if  dst.person and
                 dst.person ~= person and
-                person.sense[src.person]
+                person.sense[dst.person]
             then
                 cost = cost + dst.person.here
             end
-
             for _, defender in ipairs(defenders) do
                 if Hex.dist(dst, defender.space) == 1 then
                     cost = cost + 4
                 end
             end
-            if game.data(dst.terrain).water then
-                cost = cost * 2
-            end
             return cost
         end
-        if defenders[1] then
+        if next(defenders) then
             game.person_store_defender_positions(person, cost_f, defenders)
-            local spaceF = function (space)
+            local pos_f = function (space)
                 for _, defender in ipairs(defenders) do
                     if Hex.dist(space, defender.space) == 1 then
                         return function ()
@@ -872,29 +830,25 @@ _database.person_bear = {
                     end
                 end
             end
-            if  game.person_preferred_action(person, { spaceF }) or
-                game.person_preferred_action_step(person, { spaceF }, cost_f)
-            then
+            if game.person_do_or_step(person, pos_f, cost_f) then
                 return
             end
         end
-        if  person ~= game.person_top(person) and
-            game.person_step_to_friend(person, cost_f)
-        then
-            return
-        end
-        List.delete(person.dsts, person.space)
-        if  person == game.person_top(person) and
-            not person.dsts[1]
-        then
-            game.person_store_wherever(person, cost_f)
+        if person ~= game.person_top(person) then
+            if game.person_step_to_friend(person, cost_f) then
+                return
+            end
         end
 
-        if  game.person_step_to_dsts(person, cost_f) or
-            game.person_rest(person)
-        then
+        person.interests[person.space] = nil
+        if next(person.interests) == nil then
+            game.person_store_wherever(person, cost_f)
+        end
+        if game.person_step_to_dsts(person, cost_f) then
             return
         end
+
+        game.person_rest(person)
     end
 }
 

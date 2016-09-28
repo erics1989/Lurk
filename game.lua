@@ -807,6 +807,21 @@ function game.person_preferred_action_step(person, space_fs, cost_f)
     return game.person_step_to(person, dst_f, game.space_stand, cost_f)
 end
 
+-- person does a preferred action or steps to pos
+function game.person_do_or_step(person, pos_f, cost_f)
+    local f = pos_f(person.space)
+    if f then
+        return f()
+    else
+        return game.person_step_to(
+            person,
+            pos_f,
+            game.space_stand,
+            cost_f
+        )
+    end
+end
+
 -- get the person's leader
 function game.person_top(person)
     return person.friends[1]
@@ -822,7 +837,7 @@ end
 
 -- person stores the positions of reachable enemies
 function game.person_store_defender_positions(person, cost_f, defenders)
-    person.dsts = {}
+    person.interests = {}
     for _, defender in ipairs(defenders) do
         local path = Path.astar(
             person.space,
@@ -831,7 +846,7 @@ function game.person_store_defender_positions(person, cost_f, defenders)
             cost_f
         )
         if path then
-            table.insert(person.dsts, defender.space)
+            person.interests[defender.space] = true
         end
     end
 end
@@ -850,14 +865,14 @@ function game.person_store_wherever(person, cost_f)
     end
     local spaces = List.filter(_state.spaces, f)
     local dst = spaces[game.rand2(#spaces)]
-    person.dsts = { dst }
+    person.interests = {}
+    person.interests[dst] = true
 end
 
 -- person steps on a path to past-stored spaces
 function game.person_step_to_dsts(person, cost_f)
-    local set = List.set(person.dsts)
     local dst_f = function (space)
-        return set[space]
+        return person.interests[space]
     end
     return game.person_step_to(person, dst_f, game.space_stand, cost_f)
 end
