@@ -197,20 +197,11 @@ _database.status_underwater = {
         end
         ]]--
         person.status_underwater = status
+        person.restricted = true
     end,
-    object_status_enter = function (object, status)
-        --[[
-        if game.person_sense(_state.hero, object) then
-            local str = string.format(
-                game.data(object).plural and
-                    "%s are underwater." or
-                    "%s is underwater.",
-                grammar.cap(grammar.the(game.data(object).name))
-            )
-            game.print(str)
-        end
-        ]]--
-        object.status_underwater = status
+    person_status_exit = function (person, status)
+        person.status_underwater = nil
+        person.restricted = nil
     end,
     person_space_sense1 = function (person, status, space)
         local f = function (space)
@@ -226,8 +217,19 @@ _database.status_underwater = {
             game.person_status_exit(person, status)
         end
     end,
-    person_status_exit = function (person, status)
-        person.status_underwater = nil
+    object_status_enter = function (object, status)
+        --[[
+        if game.person_sense(_state.hero, object) then
+            local str = string.format(
+                game.data(object).plural and
+                    "%s are underwater." or
+                    "%s is underwater.",
+                grammar.cap(grammar.the(game.data(object).name))
+            )
+            game.print(str)
+        end
+        ]]--
+        object.status_underwater = status
     end,
     object_status_exit = function (object, status)
         object.status_underwater = nil

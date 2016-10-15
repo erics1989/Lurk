@@ -27,7 +27,7 @@ end
 function state_start.draw()
     love.graphics.setFont(fonts.header)
     love.graphics.setColor(131, 148, 150)
-    local str = "Lurker"
+    local str = "Lurk"
     love.graphics.print(
         str,
         1280 / 2 - fonts.header:getWidth(str) / 2,

@@ -432,8 +432,13 @@ function state_one.step(dx, dy)
         if game.space_stand(space) then
             if space.person then
                 if space.person.faction ~= _state.hero.faction then
-                    game.person_attack(_state.hero, space)
-                    state_one.postact()
+                    if _state.hero.restricted then
+                        game.print("You can't attack underwater.")
+                        game.flush()
+                    else
+                        game.person_attack(_state.hero, space)
+                        state_one.postact()
+                    end
                 else
                     game.person_transpose(_state.hero, space.person)
                     state_one.postact()
@@ -923,6 +928,12 @@ function state_one.draw_sidebar()
         end
         py = py + 1 * h
     end
+    py = py + 1 * h
+
+    -- turn
+    local str = string.format("turn %d", _state.turn)
+    love.graphics.print(str, px, py)
+    py = py + 1 * h
 
     -- open rucksack
     px = 960 + 12

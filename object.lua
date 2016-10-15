@@ -35,13 +35,9 @@ _database.object_shortsword = {
         object.enchant = 2
     end,
     person_poststep = function (person, object, src)
-        if game.person_object_equipped(person, object) then
-            game.person_poststep_attack2(person, src)
-            game.person_poststep_attack3(person, src)
-        end
-    end,
-    person_postjump = function (person, object, src)
-        if game.person_object_equipped(person, object) then
+        if  game.person_object_equipped(person, object) and
+            not person.restricted
+        then
             game.person_poststep_attack2(person, src)
             game.person_poststep_attack3(person, src)
         end
@@ -69,7 +65,9 @@ _database.object_shortsword = {
     },
     equip = {
         valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)
+            return
+                not game.person_object_equipped(person, object) and
+                not person.restricted
         end,
         execute = function (person, object, space)
             if game.person_object_equipped(person, object) then
@@ -112,7 +110,9 @@ _database.object_machete = {
     },
     equip = {
         valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)
+            return
+                not game.person_object_equipped(person, object) and
+                not person.restricted
         end,
         execute = function (person, object, space)
             if game.person_object_equipped(person, object) then
@@ -123,7 +123,9 @@ _database.object_machete = {
         end
     },
     person_poststep = function (person, object, src)
-        if game.person_object_equipped(person, object) then
+        if  game.person_object_equipped(person, object) and
+            not person.restricted
+        then
             game.person_poststep_attack2(person, src)
         end
     end
@@ -159,7 +161,9 @@ _database.object_spear = {
     },
     equip = {
         valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)
+            return
+                not game.person_object_equipped(person, object) and
+                not person.restricted
         end,
         execute = function (person, object, space)
             if game.person_object_equipped(person, object) then
@@ -173,7 +177,9 @@ _database.object_spear = {
     
     end,
     person_poststep = function (person, object, src)
-        if game.person_object_equipped(person, object) then
+        if  game.person_object_equipped(person, object) and
+            not person.restricted
+        then
             game.person_poststep_attack3(person, src)
         end
     end
@@ -228,7 +234,9 @@ _database.object_shortbow = {
     },
     equip = {
         valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)
+            return
+                not game.person_object_equipped(person, object) and
+                not person.restricted
         end,
         execute = function (person, object, space)
             if game.person_object_equipped(person, object) then
@@ -259,7 +267,9 @@ _database.object_ring_of_stealth = {
     end,
     equip = {
         valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)
+            return
+                not game.person_object_equipped(person, object) and
+                not person.restricted
         end,
         execute = function (person, object, space)
             if game.person_object_equipped(person, object) then
@@ -290,7 +300,9 @@ _database.object_ring_of_clairvoyance = {
     end,
     equip = {
         valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)
+            return
+                not game.person_object_equipped(person, object) and
+                not person.restricted
         end,
         execute = function (person, object, space)
             if game.person_object_equipped(person, object) then
@@ -323,7 +335,9 @@ _database.object_staff_of_incineration = {
     end,
     use = {
         valid = function (person, object)
-            return not object.status_charging
+            return
+                not person.restricted and
+                not object.status_charging
         end,
         range = function (person, object, space)
             return game.person_space_proj(person, space)
@@ -375,7 +389,9 @@ _database.object_staff_of_distortion = {
     end,
     use = {
         valid = function (person, object)
-            return not object.status_charging
+            return
+                not person.restricted and
+                not object.status_charging
         end,
         range = function (person, object, space)
             return game.person_space_proj(person, space)
@@ -413,7 +429,9 @@ _database.object_staff_of_suggestion = {
     end,
     use = {
         valid = function (person, object)
-            return not object.status_charging
+            return
+                not person.restricted and
+                not object.status_charging
         end,
         range = function (person, object, space)
             return game.person_space_proj(person, space)
@@ -454,7 +472,9 @@ _database.object_staff_of_substitution = {
     end,
     use = {
         valid = function (person, object)
-            return not object.status_charging
+            return
+                not person.restricted and
+                not object.status_charging
         end,
         range = function (person, object, space)
             return game.person_space_proj(person, space)
@@ -492,7 +512,9 @@ _database.object_charm_of_passage = {
     end,
     use = {
         valid = function (person, object)
-            return not object.status_charging
+            return
+                not person.restricted and
+                not object.status_charging
         end,
         range = function (person, object, space)
             local d = Hex.dist(person.space, space)
@@ -530,7 +552,9 @@ _database.object_charm_of_verdure = {
     end,
     use = {
         valid = function (person, object)
-            return not object.status_charging
+            return
+                not person.restricted and
+                not object.status_charging
         end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
@@ -563,6 +587,9 @@ _database.object_potion_of_health = {
         game.object_setup(object)
     end,
     use = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
@@ -573,6 +600,9 @@ _database.object_potion_of_health = {
         end
     },
     throw = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         range = function (person, object, space)
             return Hex.dist(person.space, space) <= 4
         end,
@@ -598,6 +628,9 @@ _database.object_potion_of_distortion = {
         game.object_setup(object)
     end,
     use = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
@@ -608,6 +641,9 @@ _database.object_potion_of_distortion = {
         end
     },
     throw = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         range = function (person, object, space)
             return Hex.dist(person.space, space) <= 4
         end,
@@ -634,6 +670,9 @@ _database.object_potion_of_blindness = {
         game.object_setup(object)
     end,
     use = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
@@ -646,6 +685,9 @@ _database.object_potion_of_blindness = {
         end
     },
     throw = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         range = function (person, object, space)
             return Hex.dist(person.space, space) <= 4
         end,
@@ -675,6 +717,9 @@ _database.object_potion_of_invisibility = {
     end,
 
     use = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
@@ -687,6 +732,9 @@ _database.object_potion_of_invisibility = {
         end
     },
     throw = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         range = function (person, object, space)
             return Hex.dist(person.space, space) <= 4
         end,
@@ -715,6 +763,9 @@ _database.object_potion_of_incineration = {
         game.object_setup(object)
     end,
     use = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
@@ -739,6 +790,9 @@ _database.object_potion_of_incineration = {
         end
     },
     throw = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         range = function (person, object, space)
             return Hex.dist(person.space, space) <= 4
         end,
@@ -779,6 +833,9 @@ _database.object_potion_of_domination = {
         game.object_setup(object)
     end,
     use = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
@@ -791,6 +848,9 @@ _database.object_potion_of_domination = {
         end
     },
     throw = {
+        valid = function (person, object)
+            return not person.restricted
+        end,
         range = function (person, object, space)
             return Hex.dist(person.space, space) <= 4
         end,
@@ -824,7 +884,7 @@ _database.object_bones = {
 
 _database.object_blood = {
     name = "a puddle of blood",
-    plural_name = "piles of bones",
+    plural_name = "puddles of blood",
     color = color_constants.red,
     character = "%",
     sprite = { file = "resource/sprite/FX_Blood.png", x = 9, y = 0 },
