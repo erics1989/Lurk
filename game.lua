@@ -591,7 +591,6 @@ function game.person_displace(person)
             game.data(space.terrain).stand and
             not space.person
     end
-    local spaces = List.filter(_state.spaces, f)
     local path = Path.dijk(person.space, dst_f, game.space_stand)
     if path then
         for i = #path, 2 do
@@ -1152,14 +1151,13 @@ end
 
 -- object gets displaced (relocated nearby)
 function game.object_displace(object)
-    local f = function (space)
+    local dist_f = function (space)
         return
             space ~= object.space and
             game.data(space.terrain).stand and
             not space.object
     end
-    local spaces = List.filter(_state.spaces, f)
-    local path = Path.astar(object.space, spaces, game.space_stand)
+    local path = Path.dijk(object.space, dst_f, game.space_stand)
     if path then
         for i = #path, 2 do
             local dst = path[i]
