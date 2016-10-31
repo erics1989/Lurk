@@ -85,7 +85,7 @@ end
 
 function state_menu.update(t)
     local cpx, cpy = love.mouse.getPosition()
-    local h = fonts.monospace:getHeight()
+    local h = abstraction.font_h(fonts.monospace)
     local px = 12
     local py = 12 + 2 * h
     if state_menu.paragraph then
@@ -103,7 +103,7 @@ function state_menu.update(t)
             option.k or LETTERS[i],
             option.str
         )
-        local w = fonts.monospace:getWidth(str)
+        local w = abstraction.font_w(fonts.monospace, str)
         if  option.valid and
             px <= cpx and cpx < px + w and
             py <= cpy and cpy < py + h
@@ -131,8 +131,8 @@ function state_menu.draw()
     end
     state_one.draw_map()
 
-    local w = fonts.monospace:getWidth("a")
-    local h = fonts.monospace:getHeight()
+    local w = abstraction.font_w(fonts.monospace)
+    local h = abstraction.font_h(fonts.monospace)
     local px = 12
     local py = 12
     love.graphics.setFont(fonts.monospace)
@@ -155,7 +155,7 @@ function state_menu.draw()
             py + math.floor((h - 24) / 2)
         )
     elseif character then
-        love.graphics.print(character, px + offset * w, py)
+        abstraction.print(character, px + offset, py)
     end
     py = py + 2 * h
 
@@ -199,7 +199,8 @@ function state_menu.draw()
             option.str
         )
         state_one.print(bcolor, color, str, px, py)
-        local offset = fonts.monospace:getWidth(
+        local offset = abstraction.font_w(
+            fonts.monospace,
             string.format("[%s] ", option.k or " ")
         )
         
@@ -213,7 +214,7 @@ function state_menu.draw()
                 py + math.floor((h - 24) / 2)
             )
         elseif character then
-            love.graphics.print(character, px + offset * w, py)
+            abstraction.print(character, px + offset, py)
         end
         py = py + h
     end

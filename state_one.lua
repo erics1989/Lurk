@@ -348,11 +348,11 @@ function state_one.mousepressed(cpx, cpy, b)
                 end
             end
         else
-            local h = fonts.monospace:getHeight()
+            local h = abstraction.font_h(fonts.monospace)
             local px = 960 + 12
             local py = 720 - 12 - h
             local str = "[i] open rucksack"
-            if  px <= cpx and cpx < px + fonts.monospace:getWidth(str) and
+            if  px <= cpx and cpx < px + abstraction.font_w(fonts.monospace, str) and
                 py <= cpy and cpy < py + h
             then
                 state_one.rucksack()
@@ -666,9 +666,9 @@ function state_one.draw_map(highlightF)
             )
         else
             love.graphics.setColor(color)
-            local dx = px - HS
-            local dy = py - fonts.monospace:getHeight() / 2
-            love.graphics.printf(character, dx, dy, HS * 2, "center")
+            local dx = px - 6
+            local dy = py - 12
+            abstraction.print(character, dx, dy)
         end
     end
 end
@@ -716,9 +716,10 @@ function state_one.space_representation(space, anim)
             color = { color[1] * .5, color[2] * .5, color[3] * .5 }
         end
     else
-        bcolor = { 32, 32, 32 }
-        color = { 64, 64, 64 }
-        character = "?"
+        bcolor = _database.terrain_question.bcolor
+        color = _database.terrain_question.color
+        character = _database.terrain_question.character
+        sprite = _database.terrain_question.sprite
     end
     return bcolor, color, character, sprite
 end
@@ -808,8 +809,8 @@ function state_one.draw_sidebar()
     
     local px = 960 + 12
     local py = 12
-    local w = fonts.monospace:getWidth("a")
-    local h = fonts.monospace:getHeight()
+    local w = abstraction.font_w(fonts.monospace)
+    local h = abstraction.font_h(fonts.monospace)
 
     -- hearts
     love.graphics.setColor(color_constants.red)
@@ -821,7 +822,7 @@ function state_one.draw_sidebar()
                 px - 2, py
             )
         else
-            love.graphics.print("o", px, py)
+            abstraction.print("❤", px, py)
         end
         px = px + 2 * w
     end
@@ -833,7 +834,7 @@ function state_one.draw_sidebar()
                 px - 2, py
             )
         else
-            love.graphics.print("_", px, py)
+            abstraction.print("_", px, py)
         end
         px = px + 2 * w
     end
@@ -851,7 +852,7 @@ function state_one.draw_sidebar()
             "  %s",
             state_one.get_object_str(object)
         )
-        love.graphics.print(str, px, py)
+        abstraction.print(str, px, py)
         if state_one.sprites and sprite then
             love.graphics.draw(
                 sprites[sprite.file].sheet,
@@ -859,7 +860,7 @@ function state_one.draw_sidebar()
                 px - 2, py
             )
         elseif character then
-            love.graphics.print(character, px, py)
+            abstraction.print(character, px, py)
         end
         py = py + 1 * h
     end
@@ -871,7 +872,7 @@ function state_one.draw_sidebar()
             "  %s",
             state_one.get_object_str(object)
         )
-        love.graphics.print(str, px, py)
+        abstraction.print(str, px, py)
         if state_one.sprites and sprite then
             love.graphics.draw(
                 sprites[sprite.file].sheet,
@@ -879,7 +880,7 @@ function state_one.draw_sidebar()
                 px - 2, py
             )
         elseif character then
-            love.graphics.print(character, px, py)
+            abstraction.print(character, px, py)
         end
         py = py + 1 * h
     end
@@ -893,7 +894,7 @@ function state_one.draw_sidebar()
         if status.counters then
             str = string.format("%s (%d turns)", str, status.counters)
         end
-        love.graphics.print(str, px, py)
+        abstraction.print(str, px, py)
         if state_one.sprites and sprite then
             love.graphics.draw(
                 sprites[sprite.file].sheet,
@@ -901,7 +902,7 @@ function state_one.draw_sidebar()
                 px - 2, py
             )
         elseif character then
-            love.graphics.print(character, px, py)
+            abstraction.print(character, px, py)
         end
         py = py + 1 * h
     end
@@ -916,7 +917,7 @@ function state_one.draw_sidebar()
         local sprite = game.data(defender).sprite
         local character = game.data(defender).character
         local str = string.format("  %s", game.data(defender).name)
-        love.graphics.print(str, px, py)
+        abstraction.print(str, px, py)
         if state_one.sprites and sprite then
             love.graphics.draw(
                 sprites[sprite.file].sheet,
@@ -924,7 +925,7 @@ function state_one.draw_sidebar()
                 px - 2, py
             )
         elseif character then
-            love.graphics.print(character, px, py)
+            abstraction.print(character, px, py)
         end
         py = py + 1 * h
     end
@@ -932,7 +933,7 @@ function state_one.draw_sidebar()
 
     -- turn
     local str = string.format("turn %d", _state.turn)
-    love.graphics.print(str, px, py)
+    abstraction.print(str, px, py)
     py = py + 1 * h
 
     -- open rucksack
@@ -942,7 +943,7 @@ function state_one.draw_sidebar()
     local cpx, cpy = love.mouse.getPosition()
     local bcolor, color
     if states[#states] == state_one then
-        if  px <= cpx and cpx < px + fonts.monospace:getWidth(str) and
+        if  px <= cpx and cpx < px + abstraction.font_w(fonts.monospace, str) and
             py <= cpy and cpy < py + h
         then
             bcolor = color_constants.base3
@@ -966,7 +967,7 @@ function state_one.draw_sidebar()
             px + 4*w - 2, py
         )
     elseif character then
-        love.graphics.print(character, px, py)
+        abstraction.print(character, px + 4*w, py)
     end
 
 end
@@ -974,11 +975,11 @@ end
 -- print highlighted text
 function state_one.print(bcolor, color, str, px, py)
     local font = love.graphics.getFont()
-    local w = font:getWidth(str)
-    local h = font:getHeight()
+    local w = abstraction.font_w(font, str)
+    local h = abstraction.font_h(font)
     love.graphics.setColor(bcolor)
     love.graphics.rectangle("fill", px, py, w, h)
     love.graphics.setColor(color)
-    love.graphics.print(str, px, py)
+    abstraction.print(str, px, py)
 end
 

@@ -3,6 +3,14 @@
 
 _database = _database or {}
 
+_database.terrain_question = {
+    name = "?",
+    bcolor = { 32, 32, 32 },
+    color = { 64, 64, 64 },
+    character = "?",
+    sprite = { file = "resource/sprite/Interface.png", x = 2, y = 3 },
+}
+
 _database.terrain_dot = {
     name = "dirt",
     bcolor = color_constants.base03,

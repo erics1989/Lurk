@@ -35,10 +35,10 @@ function state_start.draw()
     )
     love.graphics.setFont(fonts.monospace)
     local str = "(press any key to continue)"
-    love.graphics.print(
+    abstraction.print(
         str,
-        1280 / 2 - fonts.monospace:getWidth(str) / 2,
-        720 * 2/3 - fonts.monospace:getHeight() / 2
+        1280 / 2 - abstraction.font_w(fonts.monospace, str) / 2,
+        720 * 2/3 - abstraction.font_h(fonts.monospace) / 2
     )
 end
 

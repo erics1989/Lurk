@@ -23,7 +23,8 @@ require("state_death")
 require("state_victory")
 
 FONT_HEADER = { file = "resource/font/Eczar-Regular.ttf", size = 200 }
-FONT_MONOSPACE = { file = "resource/font/Inconsolata.otf", size = 23 }
+FONT_MONOSPACE = { file = "resource/font/6x12.bdf", size = 12 }
+--FONT_MONOSPACE = { file = "resource/font/Inconsolata.otf", size = 23 }
 BOARD_SIZE = 12
 SPRITES = {
     "resource/sprite/Avatar.png",
@@ -38,6 +39,7 @@ SPRITES = {
 
 function love.load()
     love.window.setMode(1280, 720)
+    love.graphics.setDefaultFilter("nearest", "nearest")
 
     -- resources
     init_fonts()
@@ -117,5 +119,19 @@ function love.draw()
     if f then
         f()
     end
+end
+
+abstraction = {}
+
+function abstraction.print(str, x, y)
+    love.graphics.print(str, x, y, 0, 2, 2)
+end
+
+function abstraction.font_w(font, str)
+    return font:getWidth(str or "a") * 2
+end
+
+function abstraction.font_h(font)
+    return font:getHeight() * 2
 end
 
