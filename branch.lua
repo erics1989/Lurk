@@ -7,9 +7,9 @@ _database.branch_zero = {
     [1] = {
         encounter_count = 4,
         encounters = {
-            "encounter_person_ooze",
-            --"encounter_person_kobold_warrior",
-            --"encounter_person_kobold_piker",
+            --"encounter_person_ooze",
+            "encounter_person_kobold_warrior",
+            "encounter_person_kobold_piker",
         },
         treasures = {
             "object_potion_of_health",

@@ -932,9 +932,11 @@ function state_one.draw_sidebar()
     py = py + 1 * h
 
     -- turn
+    --[[
     local str = string.format("turn %d", _state.turn)
     abstraction.print(str, px, py)
     py = py + 1 * h
+    ]]--
 
     -- open rucksack
     px = 960 + 12

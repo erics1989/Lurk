@@ -28,6 +28,7 @@ function Path.dist(srcs, valid_f, cost_f, stop)
         dist[space] = math.huge
     end
     local q = {}
+    local processed = {}
     local cf = function (space1, space2)
         return dist[space1] < dist[space2]
     end
@@ -39,8 +40,9 @@ function Path.dist(srcs, valid_f, cost_f, stop)
     end
     while q[1] do
         local space1 = List.p_dequeue(q, cf)
+        processed[space1] = true
         for _, space2 in ipairs(adjacent(space1)) do
-            if valid_f(space2) then
+            if not processed[space2] and valid_f(space2) then
                 local d = dist[space1] + cost_f(space1, space2)
                 if d < dist[space2] and d <= stop then
                     dist[space2] = d
@@ -63,6 +65,7 @@ function Path.dijk(src, dst_f, valid_f, cost_f, stop)
         dist[space] = math.huge
     end
     local q = {}
+    local processed = {}
     local cf = function (space1, space2)
         return dist[space1] < dist[space2]
     end
@@ -72,11 +75,12 @@ function Path.dijk(src, dst_f, valid_f, cost_f, stop)
     end
     while q[1] do
         local space1 = List.p_dequeue(q, cf)
+        processed[space1] = true
         if dst_f(space1) then
             return Path.reverse(space1, prev)
         else
             for _, space2 in ipairs(adjacent(space1)) do
-                if valid_f(space2) then
+                if not processed[space2] and valid_f(space2) then
                     local d = dist[space1] + cost_f(space1, space2)
                     if d < dist[space2] and d <= stop then
                         dist[space2] = d
