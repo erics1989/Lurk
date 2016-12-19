@@ -4,7 +4,6 @@ inspect = require("lib/inspect")
 
 List = require("List")
 Path = require("Path")
-gridpath = require("gridpath")
 
 Hex = require("Hex")
 grammar = require("Grammar")
