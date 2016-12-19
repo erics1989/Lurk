@@ -17,7 +17,6 @@ function state_one.init()
     state_one.describe = nil
     state_one.timer = 0
     state_one.mouse = false
-
     state_one.process_map()
 end
 
@@ -432,23 +431,33 @@ function state_one.step(dx, dy)
         if game.space_stand(space) then
             if space.person then
                 if space.person.faction ~= _state.hero.faction then
-                    if _state.hero.restricted then
-                        game.print("You can't attack underwater.")
-                        game.flush()
-                    else
+                    if game.person_can_attack(_state.hero) then
                         game.person_attack(_state.hero, space)
+                        state_one.postact()
+                    else
+                        game.print("You can't attack.")
+                        game.flush()
+                    end
+                else
+                    if game.person_can_step(_state.hero) then 
+                        game.person_transpose(_state.hero, space.person)
+                        state_one.postact()
+                    else
+                        game.print("You can't step.")
+                        game.flush()
+                    end
+                end
+            else
+                if game.person_can_step(_state.hero) then
+                    game.person_step(_state.hero, space)
+                    if space.dst and state_one.descend(space) then
+                    
+                    else
                         state_one.postact()
                     end
                 else
-                    game.person_transpose(_state.hero, space.person)
-                    state_one.postact()
-                end
-            else
-                game.person_step(_state.hero, space)
-                if space.dst and state_one.descend(space) then
-                
-                else
-                    state_one.postact()
+                    game.print("You can't step.")
+                    game.flush()
                 end
             end
         end
@@ -864,8 +873,8 @@ function state_one.draw_sidebar()
         end
         py = py + 1 * h
     end
-    if _state.hero.finger then
-        local object = _state.hero.finger
+    if _state.hero.ring then
+        local object = _state.hero.ring
         local sprite = game.data(object).sprite
         local character = game.data(object).character
         local str = string.format(
@@ -887,7 +896,11 @@ function state_one.draw_sidebar()
 
 
     -- statuses
-    for i, status in ipairs(_state.hero.statuss) do
+    local f = function (status)
+        return not game.data(status).hide
+    end
+    local statuss = List.filter(_state.hero.statuss, f)
+    for i, status in ipairs(statuss) do
         local sprite = game.data(status).sprite
         local character = game.data(status).character
         local str = string.format("  %s", game.data(status).name)

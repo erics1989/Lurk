@@ -255,7 +255,7 @@ _database.object_ring_of_stealth = {
     sprite = { file = "resource/sprite/Items.png", x = 8, y = 11 },
     character = "o",
     description = "stealth = 2",
-    part = "finger", pickup = true,
+    part = "ring", pickup = true,
     init = function (object)
         game.object_setup(object)
         object.enchant = 2
@@ -288,7 +288,7 @@ _database.object_ring_of_clairvoyance = {
     sprite = { file = "resource/sprite/Items.png", x = 8, y = 11 },
     character = "o", pickup = true,
     description = "stealth = 2",
-    part = "finger",
+    part = "ring",
     init = function (object)
         game.object_setup(object)
         object.enchant = 2

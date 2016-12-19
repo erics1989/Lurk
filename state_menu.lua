@@ -29,6 +29,7 @@ state_menu.option_escape = {
 
 function state_menu.init(data)
     state_menu.sprite = data.sprite
+    state_menu.character = data.character
     state_menu.header = data.header
     state_menu.paragraph = data.paragraph
     state_menu.options = data.options
@@ -154,8 +155,8 @@ function state_menu.draw()
             px + math.floor((w - 16) / 2),
             py + math.floor((h - 24) / 2)
         )
-    elseif character then
-        abstraction.print(character, px + offset, py)
+    elseif state_menu.character then
+        abstraction.print(state_menu.character, px, py)
     end
     py = py + 2 * h
 

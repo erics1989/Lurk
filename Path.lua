@@ -73,7 +73,7 @@ function Path.dijk(src, dst_f, valid_f, cost_f, stop)
         dist[src] = 0
         List.p_enqueue(q, src, cf)
     end
-    while q[1] do
+    while next(q) do
         local space1 = List.p_dequeue(q, cf)
         processed[space1] = true
         if dst_f(space1) then
@@ -86,6 +86,45 @@ function Path.dijk(src, dst_f, valid_f, cost_f, stop)
                         dist[space2] = d
                         prev[space2] = space1
                         List.p_enqueue(q, space2, cf)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- dijkstra
+function Path.dijk(src, dst_f, valid_f, cost_f, stop)
+    cost_f = cost_f or d_cost_f
+    stop = stop or math.huge
+    local dist = {}
+    local prev = {}
+    local cf = function (space1, space2)
+        return dist[space1] < dist[space2]
+    end
+    local q = {}
+    local outside = {}
+    for i, space in ipairs(_state.spaces) do
+        dist[space] = math.huge
+        q[i] = space
+        outside[space] = true
+    end
+    if valid_f(src) then
+        dist[src] = 0
+        List.heap(q, cf)
+    end
+    while next(q) do
+        local space1 = List.p_dequeue(q, cf)
+        outside[space1] = false
+        if dst_f(space1) then
+            return Path.reverse(space1, prev)
+        else
+            for _, space2 in ipairs(adjacent(space1)) do
+                if outside[space2] and valid_f(space2) then
+                    local d = dist[space1] + cost_f(space1, space2)
+                    if d < dist[space2] and d <= stop then
+                        dist[space2] = d
+                        prev[space2] = space1
                     end
                 end
             end

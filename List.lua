@@ -41,6 +41,15 @@ function List.extend(l1, l2)
     return l1
 end
 
+function List.reverse(a)
+    local b = {}
+    local j = #a
+    for i = 1, j do
+        b[i] = a[j - i + 1]
+    end
+    return b
+end
+
 function List.top(l, cf)
     assert(l and cf)
     local top = l[1]
@@ -87,7 +96,7 @@ end
 function List.fold(l, f, acc)
     for _, v in ipairs(l) do
         if acc then
-            acc = f(x, v)
+            acc = f(acc, v)
         else
             acc = v
         end

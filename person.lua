@@ -17,9 +17,9 @@ _database.hero = {
         local object = game.data_init("object_shortsword")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-        local object = game.data_init("object_ring_of_clairvoyance")
-        game.person_object_enter(person, object)
 
+        local status = game.data_init("status_terrestrial")
+        game.person_status_enter(person, status)
     end,
     act = function (person)
         

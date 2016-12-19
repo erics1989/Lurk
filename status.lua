@@ -3,6 +3,38 @@
 
 _database = _database or {}
 
+_database.status_aquatic = {
+    name = "aquatic",
+    character = "*",
+    person_can_step = function (person, status)
+        return person.status_underwater
+    end,
+    person_can_attack = function (person, status)
+        return person.status_underwater
+    end,
+    person_space_sense1 = function (person, status, space)
+        local f = function (space)
+            return game.data(space.terrain).water
+        end
+        return not game.obstructed(person.space, space, f)
+    end
+}
+
+_database.status_terrestrial = {
+    name = "terrestrial",
+    character = "*",
+    hide = true,
+    person_can_attack = function (person, status)
+        return not person.status_underwater
+    end,
+    person_space_sense1 = function (person, status, space)
+        local f = function (space)
+            return not person.status_underwater
+        end
+        return not game.obstructed(person.space, space, f)
+    end
+}
+
 _database.status_stunned = {
     name = "stunned",
     character = "-",

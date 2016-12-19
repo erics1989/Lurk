@@ -571,6 +571,30 @@ function game.person_object_per_dist(attacker, defender)
     return math.max(con, 1)
 end
 
+-- person can step
+function game.person_can_step(person)
+    local decorations = game.person_decorations(person)
+    for _, decoration in ipairs(decorations) do
+        local f = game.data(decoration).person_can_step
+        if  f and not f(person, decoration) then
+            return false
+        end
+    end
+    return true
+end
+
+-- person can attack
+function game.person_can_attack(person)
+    local decorations = game.person_decorations(person)
+    for _, decoration in ipairs(decorations) do
+        local f = game.data(decoration).person_can_attack
+        if  f and not f(person, decoration) then
+            return false
+        end
+    end
+    return true
+end
+
 -- person attacks
 function game.person_attack(person, space)
     -- use object in hand or person's default attack
@@ -767,6 +791,17 @@ function game.person_get_objects(attacker)
         return game.person_sense(attacker, defender)
     end
     return List.filter(_state.objects, f)
+end
+
+-- generate path
+function game.person_path(person, dst_f, stop)
+    local cost_f = game.person_cost_f(person)
+    return gridpath.dijk(_state.spaces, cost_f, dst_f, stop)
+end
+
+-- person cost function (for paths)
+function game.person_cost_f(person)
+    return 1
 end
 
 -- person steps on a path to a space, return success

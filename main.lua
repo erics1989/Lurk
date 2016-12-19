@@ -4,6 +4,8 @@ inspect = require("lib/inspect")
 
 List = require("List")
 Path = require("Path")
+gridpath = require("gridpath")
+
 Hex = require("Hex")
 grammar = require("Grammar")
 require("color_constants")
@@ -23,7 +25,8 @@ require("state_death")
 require("state_victory")
 
 FONT_HEADER = { file = "resource/font/Eczar-Regular.ttf", size = 200 }
-FONT_MONOSPACE = { file = "resource/font/6x12.bdf", size = 12 }
+FONT_MONOSPACE = { file = "resource/font/ApercuMono.otf", size = 20 }
+--FONT_MONOSPACE = { file = "resource/font/6x12.bdf", size = 12 }
 --FONT_MONOSPACE = { file = "resource/font/Inconsolata.otf", size = 23 }
 BOARD_SIZE = 12
 SPRITES = {
@@ -124,14 +127,14 @@ end
 abstraction = {}
 
 function abstraction.print(str, x, y)
-    love.graphics.print(str, x, y, 0, 2, 2)
+    love.graphics.print(str, x, y)
 end
 
 function abstraction.font_w(font, str)
-    return font:getWidth(str or "a") * 2
+    return font:getWidth(str or "a")
 end
 
 function abstraction.font_h(font)
-    return font:getHeight() * 2
+    return font:getHeight()
 end
 
