@@ -3,15 +3,15 @@
 
 state_one = {}
 
-HS = 20
+HS = 24
 
 function state_one.init()
     state_one.sprites = true
     local px, py = Hex.pos({ x = BOARD_SIZE, y = BOARD_SIZE }, HS)
-    state_one.camera = { px = px - 480, py = py - 360 }
+    state_one.camera = { px = px - 360, py = py - 360 }
     state_one.fov = {}
     state_one.perception = {}
-    state_one.threaten = {}
+    state_one.check = {}
     state_one.path = nil
     state_one.path_set = {}
     state_one.describe = nil
@@ -25,7 +25,7 @@ function state_one.deinit()
     state_one.camera = nil
     state_one.fov = nil
     state_one.perception = nil
-    state_one.threaten = nil
+    state_one.check = nil
     state_one.path = nil
     state_one.path_set = nil
     state_one.describe = nil
@@ -37,6 +37,13 @@ function state_one.keypressed(k)
     state_one.mouse = false
     state_one.path = nil
     state_one.path_set = {}
+    if k == "1" then
+        print(pp(_state.branch))
+    elseif k == "2" then
+        for _, space in ipairs(_state.map.spaces) do
+            _state.map.visited[space] = true
+        end
+    end
     if k == "space" or k == "kp5" then
         state_one.rest()
     elseif k == "h" or k == "kp4" then
@@ -48,9 +55,9 @@ function state_one.keypressed(k)
     elseif k == "j" or k == "kp2" then
         state_one.step(0, 1) 
     elseif k == "y" or k == "kp7" then
-        state_one.step(0, -1)
+        state_one.step(-1, 0)
     elseif k == "n" or k == "kp3" then
-        state_one.step(0, 1)
+        state_one.step(1, 0)
     elseif k == "b" or k == "kp1" then
         state_one.step(-1, 1)
     elseif k == "u" or k == "kp9" then
@@ -365,6 +372,10 @@ function state_one.mousepressed(cpx, cpy, b)
                 state_one.check_from_afar(person_or_object)
             end
         end
+    elseif b == 3 then
+        if space then
+            print(space.x, space.y, space.z)
+        end
     end
 end
 
@@ -372,7 +383,7 @@ function state_one.mousemoved(px, py, dpx, dpy)
     state_one.mouse = true
     state_one.describe = nil
     local space = state_one.get_space(px, py)
-    if space and _state.visited[space] then
+    if space and _state.map.visited[space] then
         state_one.path_init(space)
         if
             space.person and
@@ -412,9 +423,21 @@ function state_one.path_init(dst)
     assert(_state.hero.space)
     assert(dst)
     local valid_f = function (space)
-        return _state.visited[space] and game.space_stand(space)
+        return _state.map.visited[space] and game.space_stand(space)
     end
-    state_one.path = Path.astar(_state.hero.space, dst, valid_f)
+    local heuristic = function (src, dst)
+        local ax, ay = Hex.pos(src, 1)
+        local bx, by = Hex.pos(dst, 1)
+        return math.sqrt(ax, ay, bx, by)
+    end
+    state_one.path = Path.astar(
+        _state.hero.space,
+        dst,
+        valid_f,
+        nil,
+        nil,
+        heuristic
+    )
     if state_one.path then
         state_one.path_set = List.set(state_one.path)
     else
@@ -450,11 +473,7 @@ function state_one.step(dx, dy)
             else
                 if game.person_can_step(_state.hero) then
                     game.person_step(_state.hero, space)
-                    if space.dst and state_one.descend(space) then
-                    
-                    else
-                        state_one.postact()
-                    end
+                    state_one.postact()
                 else
                     game.print("You can't step.")
                     game.flush()
@@ -492,6 +511,11 @@ function state_one.postact()
         game.person_object_pickup(_state.hero, object)
     end
     game.rotate()
+    if _state.hero.door then
+        game.descend(_state.hero.space)
+        _state.hero.door = nil
+        state_one.timer = 0
+    end
     state_one.process_map()
     if _state.hero.dead then
         game.person_exit(_state.hero)
@@ -503,9 +527,9 @@ end
 -- process the map
 function state_one.process_map()
     state_one.process_fov()
-    state_one.defenders = game.person_get_defenders(_state.hero)
+    state_one.opponents = game.person_get_opponents(_state.hero)
     state_one.process_con_map()
-    state_one.process_threaten_map()
+    state_one.process_check_map()
 end
 
 -- process the field of vision
@@ -513,11 +537,11 @@ function state_one.process_fov()
     state_one.fov = {}
     state_one.sense = {}
     for _, friend in ipairs(_state.hero.friends) do
-        for _, space in ipairs(_state.spaces) do
+        for _, space in ipairs(_state.map.spaces) do
             if  not state_one.fov[space] and
                 game.person_space_sense(friend, space)
             then
-                _state.visited[space] = true
+                _state.map.visited[space] = true
                 state_one.fov[space] = true
                 if  space.person and
                     not state_one.sense[space.person] and
@@ -545,12 +569,12 @@ function state_one.process_con_map()
             not game.person_sense(person, _state.hero) and
             person.faction ~= _state.hero.faction
     end
-    local persons = List.filter(_state.persons, f)
+    local persons = List.filter(_state.map.persons, f)
     for _, person in ipairs(persons) do
         local dist = game.person_person_per_dist(person, _state.hero)
         local spaces = Hex.range(person.space, dist)
         for _, space in ipairs(spaces) do
-            if  _state.visited[space] and
+            if  _state.map.visited[space] and
                 game.person_space_sense(person, space)
             then
                 state_one.perception[space] = true
@@ -560,50 +584,26 @@ function state_one.process_con_map()
 end
 
 -- process enemy attack ranges
-function state_one.process_threaten_map()
-    state_one.threaten = {}
-    local f = function (person)
-        return
-            state_one.sense[person] and
-            game.person_sense(person, _state.hero) and
-            person.faction ~= _state.hero.faction and
-            game.data(person).threaten
+function state_one.process_check_map()
+    state_one.check = {}
+    local opponents = game.person_get_opponents(_state.hero)
+    local f = function (opponent)
+        return state_one.sense[opponent]
     end
-    local persons = List.filter(_state.persons, f)
+    opponents = List.filter(opponents, f)
     local f = function (space)
-        return game.space_stand(space) and _state.visited[space]
+        return
+            game.space_stand(space) and
+            not space.terrain.door and
+            _state.map.visited[space]
     end
-    local spaces = List.filter(_state.spaces, f)
-    for _, person in ipairs(persons) do
+    local spaces = List.filter(_state.map.spaces, f)
+    for _, opponent in ipairs(opponents) do
         for _, space in ipairs(spaces) do
-            local f = game.data(person).threaten
-            if f then
-                if f(person, space) then
-                    state_one.threaten[space] = true
-                end
+            if game.person_space_check(opponent, space) then
+                state_one.check[space] = true
             end
         end
-    end
-end
-
--- go up/dn stairs
-function state_one.descend(space)
-    local dst = space.dst
-    if dst.name == "END" then
-        if _state.hero.seed then
-            table.insert(states, state_victory)
-        else
-            game.print("You can't ascend w/o The Seed of Despair.")
-        end
-    elseif dst then
-        local str = space.terrain.id == "terrain_stairs_up" and
-            "You ascend the stairs." or
-            "You descend the stairs."
-        game.print(str)
-        game.branch_descend(dst)
-        state_one.process_map()
-        state_one.timer = 0
-        return true
     end
 end
 
@@ -628,12 +628,12 @@ function state_one.draw()
             color = { color[1], color[2] + 64, color[3] }
         end
         -- attack range
-        if state_one.threaten[space] then
+        if state_one.check[space] then
             bcolor = { bcolor[1] + 64, bcolor[2], bcolor[3] }
             color = { color[1] + 64, color[2], color[3] }
         end
         -- person destinations
-        for _, person in ipairs(_state.persons) do
+        for _, person in ipairs(_state.map.persons) do
             if person.dsts then
                 if List.contains(person.dsts, space) then
                     bcolor = { bcolor[1] + 64, bcolor[2], bcolor[3] }
@@ -651,7 +651,7 @@ end
 function state_one.draw_map(highlightF)
     local anim = state_one.timer % 1 <= 0.5 and 1 or 2
     love.graphics.setFont(fonts.monospace)
-    for _, space in ipairs(_state.spaces) do        
+    for _, space in ipairs(_state.map.spaces) do        
         local px, py = Hex.pos(space, HS)
         px = px - state_one.camera.px
         py = py - state_one.camera.py
@@ -685,7 +685,7 @@ end
 -- get the representation of a space for printing
 function state_one.space_representation(space, anim)
     local bcolor, color, character, sprite
-    if _state.visited[space] then
+    if _state.map.visited[space] then
         bcolor = game.data(space.terrain).bcolor
         if game.data(space.terrain).water then
             local v = love.math.noise(
@@ -734,6 +734,7 @@ function state_one.space_representation(space, anim)
 end
 
 -- draw a hex
+--[[
 function state_one.draw_hex(px, py)
     love.graphics.polygon(
         "fill",
@@ -768,8 +769,44 @@ function state_one.draw_hex(px, py)
     )
     love.graphics.setLineWidth(1)
 end
+]]
+function state_one.draw_hex(px, py)
+    love.graphics.polygon(
+        "fill",
+        px + (HS - 1) * math.cos(math.pi * 0/6),
+        py + (HS - 1) * math.sin(math.pi * 0/6),
+        px + (HS - 1) * math.cos(math.pi * 2/6),
+        py + (HS - 1) * math.sin(math.pi * 2/6),
+        px + (HS - 1) * math.cos(math.pi * 4/6),
+        py + (HS - 1) * math.sin(math.pi * 4/6),
+        px + (HS - 1) * math.cos(math.pi * 6/6),
+        py + (HS - 1) * math.sin(math.pi * 6/6),
+        px + (HS - 1) * math.cos(math.pi * 8/6),
+        py + (HS - 1) * math.sin(math.pi * 8/6),
+        px + (HS - 1) * math.cos(math.pi * 10/6),
+        py + (HS - 1) * math.sin(math.pi * 10/6)
+    )
+    love.graphics.setLineWidth(2)
+    love.graphics.polygon(
+        "line",
+        px + (HS - 1) * math.cos(math.pi * 0/6),
+        py + (HS - 1) * math.sin(math.pi * 0/6),
+        px + (HS - 1) * math.cos(math.pi * 2/6),
+        py + (HS - 1) * math.sin(math.pi * 2/6),
+        px + (HS - 1) * math.cos(math.pi * 4/6),
+        py + (HS - 1) * math.sin(math.pi * 4/6),
+        px + (HS - 1) * math.cos(math.pi * 6/6),
+        py + (HS - 1) * math.sin(math.pi * 6/6),
+        px + (HS - 1) * math.cos(math.pi * 8/6),
+        py + (HS - 1) * math.sin(math.pi * 8/6),
+        px + (HS - 1) * math.cos(math.pi * 10/6),
+        py + (HS - 1) * math.sin(math.pi * 10/6)
+    )
+    love.graphics.setLineWidth(1)
+end
 
 -- draw a hex outline
+--[[
 function state_one.draw_hex_outline(px, py)
     love.graphics.setColor(color_constants.base3)
     love.graphics.setLineWidth(2)
@@ -787,6 +824,28 @@ function state_one.draw_hex_outline(px, py)
         py + (HS - 2) * math.sin(math.pi * 3/2),
         px + (HS - 2) * math.cos(math.pi * 11/6),
         py + (HS - 2) * math.sin(math.pi * 11/6)
+    )
+end
+]]
+
+function state_one.draw_hex_outline(px, py)
+    love.graphics.setColor(color_constants.base3)
+    love.graphics.setLineWidth(2)
+    love.graphics.polygon(
+        "line",
+        px + (HS - 1) * math.cos(math.pi * 0/6),
+        py + (HS - 1) * math.sin(math.pi * 0/6),
+        px + (HS - 1) * math.cos(math.pi * 2/6),
+        py + (HS - 1) * math.sin(math.pi * 2/6),
+        px + (HS - 1) * math.cos(math.pi * 4/6),
+        py + (HS - 1) * math.sin(math.pi * 4/6),
+        px + (HS - 1) * math.cos(math.pi * 6/6),
+        py + (HS - 1) * math.sin(math.pi * 6/6),
+        px + (HS - 1) * math.cos(math.pi * 8/6),
+        py + (HS - 1) * math.sin(math.pi * 8/6),
+        px + (HS - 1) * math.cos(math.pi * 10/6),
+        py + (HS - 1) * math.sin(math.pi * 10/6)
+
     )
 end
 
@@ -921,15 +980,15 @@ function state_one.draw_sidebar()
     end
     py = py + 1 * h
 
-    -- defenders
-    local defenders = List.concat(
-        state_one.defenders,
+    -- opponents
+    local opponents = List.concat(
+        state_one.opponents,
         game.person_get_objects(_state.hero)
     )
-    for i, defender in ipairs(defenders) do
-        local sprite = game.data(defender).sprite
-        local character = game.data(defender).character
-        local str = string.format("  %s", game.data(defender).name)
+    for i, opponent in ipairs(opponents) do
+        local sprite = game.data(opponent).sprite
+        local character = game.data(opponent).character
+        local str = string.format("  %s", game.data(opponent).name)
         abstraction.print(str, px, py)
         if state_one.sprites and sprite then
             love.graphics.draw(

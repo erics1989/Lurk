@@ -1,7 +1,8 @@
 
 binser = require("lib/binser")
-inspect = require("lib/inspect")
+pp = require("lib/inspect")
 
+require("glue")
 List = require("List")
 Path = require("Path")
 
@@ -10,6 +11,7 @@ grammar = require("Grammar")
 require("color_constants")
 require("game")
 require("generate")
+generate_map = require("generate_map")
 require("branch")
 require("encounter")
 require("terrain")
@@ -27,7 +29,7 @@ FONT_HEADER = { file = "resource/font/Eczar-Regular.ttf", size = 200 }
 FONT_MONOSPACE = { file = "resource/font/ApercuMono.otf", size = 20 }
 --FONT_MONOSPACE = { file = "resource/font/6x12.bdf", size = 12 }
 --FONT_MONOSPACE = { file = "resource/font/Inconsolata.otf", size = 23 }
-BOARD_SIZE = 12
+BOARD_SIZE = 9
 SPRITES = {
     "resource/sprite/Avatar.png",
     "resource/sprite/FX_Blood.png",

@@ -19,8 +19,12 @@ end
 function Hex.pos(space, size)
     assert(space)
     assert(size)
+    --[[
     local px = size * math.sqrt(3) * (space.x + space.y / 2)
     local py = size * 3/2 * space.y
+    ]]
+    local px = size * 3/2 * space.x
+    local py = size * math.sqrt(3) * (space.x / 2 + space.y)
     return px, py
 end
 
@@ -29,8 +33,12 @@ function Hex.at_pos(px, py, size)
     assert(px)
     assert(py)
     assert(size)
+    --[[
     local x = (px * math.sqrt(3)/3 - py / 3) / size
     local y = py * 2/3 / size
+    ]]
+    local x = px * 2/3 / size
+    local y = (py * math.sqrt(3)/3 - px / 3) / size
     return Hex.round(x, y)
 end
 

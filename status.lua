@@ -3,9 +3,32 @@
 
 _database = _database or {}
 
+_database.status_terrestrial = {
+    name = "terrestrial",
+    character = ".",
+    person_status_enter = function (person, status)
+        person.status_terrestrial = true
+    end,
+    person_status_exit = function (person, status)
+        person.status_terrestrial = nil
+    end,
+    person_can_attack = function (person, status)
+        return not person.status_underwater
+    end,
+    person_space_sense1 = function (person, status, space)
+        return not person.status_underwater
+    end
+}
+
 _database.status_aquatic = {
     name = "aquatic",
-    character = "*",
+    character = "~",
+    person_status_enter = function (person, status)
+        person.status_aquatic = true
+    end,
+    person_status_exit = function (person, status)
+        person.status_aquatic = nil
+    end,
     person_can_step = function (person, status)
         return person.status_underwater
     end,
@@ -13,25 +36,10 @@ _database.status_aquatic = {
         return person.status_underwater
     end,
     person_space_sense1 = function (person, status, space)
-        local f = function (space)
-            return game.data(space.terrain).water
-        end
-        return not game.obstructed(person.space, space, f)
-    end
-}
-
-_database.status_terrestrial = {
-    name = "terrestrial",
-    character = "*",
-    hide = true,
-    person_can_attack = function (person, status)
-        return not person.status_underwater
+        return person.status_underwater
     end,
-    person_space_sense1 = function (person, status, space)
-        local f = function (space)
-            return not person.status_underwater
-        end
-        return not game.obstructed(person.space, space, f)
+    per_addend = function (person, opponent, status)
+        return person.status_underwater and 8 or 0
     end
 }
 
@@ -117,7 +125,7 @@ _database.status_blind = {
 _database.status_acute_senses = {
     name = "acute senses",
     character = "+",
-    per_addend = function (attacker, defender, decoration)
+    per_addend = function (attacker, opponent, decoration)
         return 2
     end,
 }
@@ -215,25 +223,17 @@ _database.status_underwater = {
     name = "underwater",
     character = "~",
     sprite = { file = "resource/sprite/FX_General.png", x = 13, y = 2 },
-    init = function (status) end,
+    init = function (status)
+    
+    end,
     person_status_enter = function (person, status)
-        --[[
-        if game.person_sense(_state.hero, person) then
-            local str = string.format(
-                game.data(person).plural and
-                    "%s are underwater." or
-                    "%s is underwater.",
-                grammar.cap(grammar.the(game.data(person).name))
-            )
-            game.print(str)
-        end
-        ]]--
         person.status_underwater = status
-        person.restricted = true
     end,
     person_status_exit = function (person, status)
         person.status_underwater = nil
-        person.restricted = nil
+    end,
+    con = function (person, attacker, status)
+        return 1
     end,
     person_space_sense1 = function (person, status, space)
         local f = function (space)
@@ -241,26 +241,12 @@ _database.status_underwater = {
         end
         return not game.obstructed(person.space, space, f)
     end,
-    con = function (person, attacker, status)
-        return attacker.status_underwater and 20 or 1
-    end,
     person_postact = function (person, status)
         if game.data(person.space.terrain).water == nil then
             game.person_status_exit(person, status)
         end
     end,
     object_status_enter = function (object, status)
-        --[[
-        if game.person_sense(_state.hero, object) then
-            local str = string.format(
-                game.data(object).plural and
-                    "%s are underwater." or
-                    "%s is underwater.",
-                grammar.cap(grammar.the(game.data(object).name))
-            )
-            game.print(str)
-        end
-        ]]--
         object.status_underwater = status
     end,
     object_status_exit = function (object, status)

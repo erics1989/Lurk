@@ -10,12 +10,12 @@ function automata(startF, process1F, process2F, n)
     assert(startF)
     n = n or 1
     local generation1 = {}
-    for _, space in ipairs(_state.spaces) do
+    for _, space in ipairs(_state.map.spaces) do
         generation1[space] = startF(space)
     end
     for i = 1, n do
         local generation2 = {}
-        for _, space1 in ipairs(_state.spaces) do
+        for _, space1 in ipairs(_state.map.spaces) do
             local counter = 0
             if generation1[space1] then
                 counter = counter + 1
@@ -29,7 +29,7 @@ function automata(startF, process1F, process2F, n)
         end
         generation1 = generation2
     end
-    for _, space in ipairs(_state.spaces) do
+    for _, space in ipairs(_state.map.spaces) do
         if generation1[space] then
             if process1F then
                 process1F(space)
@@ -73,7 +73,7 @@ function connect1(validF, connectF)
     assert(validF)
     assert(connectF)
     -- get a valid space
-    local space1 = List.filter(_state.spaces, validF)[1]
+    local space1 = List.filter(_state.map.spaces, validF)[1]
     assert(space1)
     while true do
         -- flood fill to find connected/disconnected valid spaces
@@ -85,7 +85,7 @@ function connect1(validF, connectF)
         )
         local connected = {}
         local disconnected = {}
-        for _, space in ipairs(_state.spaces) do
+        for _, space in ipairs(_state.map.spaces) do
             if validF(space) then
                 if connected_set[space] then
                     table.insert(connected, space)
@@ -147,7 +147,7 @@ end
 -- gets 2 distant spaces
 function get_distant_spaces(validF)
     assert(validF)
-    local spaces = List.filter(_state.spaces, validF)
+    local spaces = List.filter(_state.map.spaces, validF)
     assert(spaces[1])
     local space1 = spaces[game.rand1(#spaces)]
     local dist = Path.dist({ space1 }, validF)

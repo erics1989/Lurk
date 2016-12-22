@@ -107,7 +107,7 @@ _database.terrain_fire = {
                 space
             )
         else
-            table.insert(_state.events, terrain)
+            table.insert(_state.map.persons, terrain)
         end
     end,
     person_terrain_postact = function (person, terrain)
@@ -182,7 +182,20 @@ _database.terrain_stairs_up = {
     character = "<",
     sprite = { file = "resource/sprite/Terrain.png", x = 15, y = 1 },
     sense = true,
-    stand = true
+    stand = true,
+    enter = function (terrain)
+        game.print("You ascend the stairs.")
+        local f = function (space)
+            return space.terrain.id == "terrain_stairs_dn"
+        end
+        local dst = List.filter(_state.map.spaces, f)[1]
+        game.person_enter(_state.hero, dst)
+    end,
+    person_terrain_postact = function (person, terrain)
+        if person == _state.hero then
+            _state.hero.door = true
+        end
+    end,
 }
 
 _database.terrain_stairs_dn = {
@@ -192,7 +205,59 @@ _database.terrain_stairs_dn = {
     character = ">",
     sprite = { file = "resource/sprite/Terrain.png", x = 14, y = 1 },
     sense = true,
-    stand = true
+    stand = true,
+    enter = function (terrain)
+        game.print("You descend the stairs.")
+        local f = function (space)
+            return space.terrain.id == "terrain_stairs_up"
+        end
+        local dst = List.filter(_state.map.spaces, f)[1]
+        game.person_enter(_state.hero, dst)
+    end,
+    person_terrain_postact = function (person, terrain)
+        if person == _state.hero then
+            _state.hero.door = true
+        end
+    end,
 }
 
+_database.terrain_chasm = {
+    name = "chasm",
+    bcolor = color_constants.min,
+    color = color_constants.base03,
+    character = " ",
+    sense = true, stand = true,
+    enter = function (terrain)
+        game.print("You fall into the chasm.")
+        local x = terrain.space.x
+        local y = terrain.space.y
+        game.person_fall(_state.hero, x, y)
+        game.person_damage(_state.hero, 1)
+    end,
+    person_terrain_postact = function (person, terrain)
+        if person == _state.hero then
+            _state.hero.door = true
+        else
+            game.print("The person falls.")
+            local x = person.space.x
+            local y = person.space.y
+            game.person_exit(person)
+            local f = function ()
+                game.person_fall(person, x, y)
+            end
+            local door = terrain.door
+            game.postpone(door.name, door.n, f)
+        end
+    end,
+    object_terrain_postact = function (object, terrain)
+        local x = object.space.x
+        local y = object.space.y
+        game.object_exit(object)
+        local f = function ()
+            game.object_fall(object, x, y)
+        end
+        local door = terrain.door
+        game.postpone(door.name, door.n, f)
+    end
+}
 

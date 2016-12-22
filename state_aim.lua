@@ -10,7 +10,7 @@ function state_aim.init(verb, object)
     -- create a set of valid spaces
     state_aim.valid = {}
     local spaces = List.filter(
-        _state.spaces,
+        _state.map.spaces,
         function (space)
             return
                 state_one.fov[space] and
@@ -118,7 +118,7 @@ function state_aim.draw()
             color = { color[1], color[2] + 64, color[3] }
         end
         -- attack range
-        if state_one.threaten[space] then
+        if state_one.check[space] then
             bcolor = { bcolor[1] + 64, bcolor[2], bcolor[3] }
             color = { color[1] + 64, color[2], color[3] }
         end

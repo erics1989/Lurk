@@ -15,8 +15,8 @@ function game.init()
     _state.past_branchs = {}
     _state.present_notes = {}
     _state.past_notes = {}
-    _state.events = {}
     _state.turn = 0
+    _state.postpone = {}
 
     game.print("(press [?] for controls, hints)")
     
@@ -24,7 +24,14 @@ function game.init()
     _state.hero = game.data_init("hero")
 
     -- enter branch zero
-    game.branch_enter({ name = "branch_zero", depth = 1 })
+    local f = function ()
+        game.person_enter(_state.hero, game.get_space(9, 17))
+    end
+    game.map_enter("dungeon", 1, f)
+
+    -- preact
+    List.delete(_state.map.events, _state.hero)
+    game.preact()
 end
 
 -- rng for level generation
@@ -68,118 +75,68 @@ function game.data_init(id)
     return o
 end
 
--- go to a branch
-function game.branch_descend(branch)
-    game.branch_exit()
-    game.branch_enter(branch)
-end
-
--- enter a branch
-function game.branch_enter(branch)
-    local prev = _state.branch
-    _state.branch = branch
-
-    local path = string.format(
-        "%s-%d",
-        branch.name, branch.depth
-    )
+function game.map_enter(name, n, enter_f)
+    local path = string.format("%s-%d", name, n)
     if _state.past_branchs[path] then
-        -- restore the branch
-        game.branch_restore(branch)
-        
-        -- place hero on stairs
-        local f = function (space)
-            return
-                space.dst and
-                space.dst.name == prev.name and
-                space.dst.depth == prev.depth
-        end
-        local stairs = List.filter(_state.spaces, f)[1]
-        game.person_enter(_state.hero, stairs)
+        game.map_restore(name, n)
     else
-        -- hearts +1
-        game.person_damage(_state.hero, -1)
-        -- generate the branch
-        game.branch_generate(branch)
+        generate_map(_state.map, name, n)
     end
+    if _state.postpone[path] then
+        for _, f in ipairs(_state.postpone[path]) do
+            f()
+        end
+        _state.postpone[path] = nil
+    end
+    enter_f() -- place the hero
+    assert(_state.hero.space)
     -- preact
-    List.delete(_state.events, _state.hero)
+    List.delete(_state.map.events, _state.hero)
     game.preact()
 end
 
--- exit and store the branch
-function game.branch_exit()
+function game.descend(space)
     game.person_exit(_state.hero)
-    game.branch_store()
-end
-
--- store the branch
-function game.branch_store()
-    -- generate a path
-    local path = string.format(
-        "%s-%d", _state.branch.name, _state.branch.depth
-    )
-    -- write branch data to the path
-    local data = {
-        spaces = _state.spaces,
-        spaces2d = _state.spaces2d,
-        visited = _state.visited,
-        events = _state.events,
-        persons = _state.persons,
-        objects = _state.objects
-    }
-    love.filesystem.write(path, binser.serialize(data))
-    _state.past_branchs[path] = true
-end
-
--- restore the branch
-function game.branch_restore(branch)
-    -- generate a path
-    local path = string.format(
-        "%s-%d", branch.name, branch.depth
-    )
-    -- read branch data
-    local data = binser.deserialize(love.filesystem.read(path))[1]
-    _state.spaces = data.spaces
-    _state.spaces2d = data.spaces2d
-    _state.visited = data.visited
-    _state.events = data.events
-    _state.persons = data.persons
-    _state.objects = data.objects
-end
-
--- generate the branch
-function game.branch_generate(branch)
-    _state.spaces = {}
-    _state.spaces2d = {}
-    _state.visited = {}
-    _state.events = {}
-    _state.persons = {}
-    _state.objects = {}
-    _database[branch.name].init(branch.depth)
-end
-
--- create a (blank) hexagonal map
-function game.spaces_init(size)
-    local center = { x = size, y = size, z = 0 - size - size }
-    for x = 1, 2 * size - 1 do
-        _state.spaces2d[x] = {}
-        for y = 1, 2 * size - 1 do
-            local space = { x = x, y = y, z = 0 - x - y }
-            if Hex.dist(space, center) < size then
-                table.insert(_state.spaces, space)
-                _state.spaces2d[x][y] = space
-            end
-        end
+    game.map_store()
+    local terrain = space.terrain
+    local f = function ()
+        game.data(terrain).enter(terrain)
     end
+    game.map_enter(terrain.door.name, terrain.door.n, f)
+end
+
+-- store the map
+function game.map_store()
+    local path = game.map_path(_state.map.name, _state.map.n)
+    _state.past_branchs[path] = true
+    love.filesystem.write(path, binser.serialize(_state.map))
+end
+
+-- restore the map
+function game.map_restore(name, n)
+    local path = game.map_path(name, n)
+    _state.map = binser.deserialize(love.filesystem.read(path))[1]
+end
+
+-- postpone to a map
+function game.postpone(name, n, f)
+    local path = game.map_path(name, n)
+    if not _state.postpone[path] then
+        _state.postpone[path] = {}
+    end
+    table.insert(_state.postpone[path], f)
+end
+
+function game.map_path(name, n)
+    return string.format("%s-%d", name, n)
 end
 
 -- pass the turn
 function game.rotate()
     game.postact()
-    while not _state.hero.dead do
+    while not _state.hero.dead and not _state.hero.door do
         -- dequeue an event
-        local event = table.remove(_state.events, 1)
+        local event = table.remove(_state.map.events, 1)
         if event == _state.hero then
             break
         else
@@ -276,7 +233,7 @@ end
 
 -- get a space w/ x and y coordinates
 function game.get_space(x, y)
-    return _state.spaces2d[x] and _state.spaces2d[x][y]
+    return _state.map.spaces2d[x] and _state.map.spaces2d[x][y]
 end
 
 -- bootstrap a person
@@ -304,8 +261,11 @@ end
 
 -- put person on space
 function game.person_enter(person, space)
-    table.insert(_state.persons, person)
+    table.insert(_state.map.persons, person)
     table.insert(person.friends, person)
+    if space.person then
+        game.person_displace(space.person)
+    end
     person.space, space.person = space, person
     person.here = 0 -- # of turns stuck
     local f = game.data(person).person_enter
@@ -315,10 +275,17 @@ function game.person_enter(person, space)
     game.person_postact(person)
 end
 
+-- nearest space
+function game.nearest_space(space, valid_f, dist_f)
+    local path = Path.dijk(space, valid_f, glue.true_f)
+    assert(next(path))
+    return path[#path]
+end
+
 -- delete person
 function game.person_exit(person)
     List.delete(person.friends, person)
-    List.delete(_state.persons, person)
+    List.delete(_state.map.persons, person)
     person.space, person.space.person = nil, nil
     person.here = nil
 end
@@ -379,7 +346,7 @@ function game.person_postact(person)
         person.here = person.here + 1
         -- enqueue
         if game.data(person).act then
-            table.insert(_state.events, person)
+            table.insert(_state.map.events, person)
         end
     end
 end
@@ -433,17 +400,17 @@ end
 
 -- person updates senses
 function game.person_scan(person)
-    for _, p in ipairs(_state.persons) do
+    for _, p in ipairs(_state.map.persons) do
         game.person_person_check(person, p)
     end
-    for _, o in ipairs(_state.objects) do
+    for _, o in ipairs(_state.map.objects) do
         game.person_object_check(person, o)
     end
 end
 
 -- person updates others' senses
 function game.person_expose(person)
-    for _, p in ipairs(_state.persons) do
+    for _, p in ipairs(_state.map.persons) do
         game.person_person_check(p, person)
     end
 end
@@ -490,26 +457,26 @@ function game.person_sense(person, person_or_object)
 end
 
 -- update person-to-person sense relation
-function game.person_person_check(attacker, defender)
-    if game.person_space_sense(attacker, defender.space) then
-        local dist = game.person_person_per_dist(attacker, defender)
-        if Hex.dist(attacker.space, defender.space) <= dist then
-            attacker.sense[defender] = defender.space
-            return defender.space
+function game.person_person_check(attacker, opponent)
+    if game.person_space_sense(attacker, opponent.space) then
+        local dist = game.person_person_per_dist(attacker, opponent)
+        if Hex.dist(attacker.space, opponent.space) <= dist then
+            attacker.sense[opponent] = opponent.space
+            return opponent.space
         end
     end
-    attacker.sense[defender] = nil
+    attacker.sense[opponent] = nil
 end
 
 -- person-to-person sense range
-function game.person_person_per_dist(attacker, defender)
-    local con = 20
+function game.person_person_per_dist(attacker, opponent)
+    local con = 99
     -- get base conspicuousness
-    local decorations = game.person_decorations(defender)
+    local decorations = game.person_decorations(opponent)
     for _, decoration in ipairs(decorations) do
         local f = game.data(decoration).con
         if f then
-            con = math.min(f(defender, attacker, decoration), con)
+            con = math.min(f(opponent, attacker, decoration), con)
         end
     end
     -- factor bonuses
@@ -517,40 +484,40 @@ function game.person_person_per_dist(attacker, defender)
     for _, decoration in ipairs(decorations) do
         local f = game.data(decoration).per_addend
         if f then
-            con = con + f(attacker, defender, decoration)
+            con = con + f(attacker, opponent, decoration)
         end
     end
-    local decorations = game.person_decorations(defender)
+    local decorations = game.person_decorations(opponent)
     for _, decoration in ipairs(decorations) do
         local f = game.data(decoration).con_addend
         if f then
-            con = con + f(defender, attacker, decoration)
+            con = con + f(opponent, attacker, decoration)
         end
     end
     return math.max(con, 1)
 end
 
 -- update person-to-object sense relation
-function game.person_object_check(attacker, defender)
-    if game.person_space_sense(attacker, defender.space) then
-        local dist = game.person_object_per_dist(attacker, defender)
-        if Hex.dist(attacker.space, defender.space) <= dist then
-            attacker.sense[defender] = defender.space
-            return defender.space
+function game.person_object_check(attacker, opponent)
+    if game.person_space_sense(attacker, opponent.space) then
+        local dist = game.person_object_per_dist(attacker, opponent)
+        if Hex.dist(attacker.space, opponent.space) <= dist then
+            attacker.sense[opponent] = opponent.space
+            return opponent.space
         end
     end
-    attacker.sense[defender] = nil
+    attacker.sense[opponent] = nil
 end
 
 -- person-to-object sense range
-function game.person_object_per_dist(attacker, defender)
+function game.person_object_per_dist(attacker, opponent)
     local con = 20
     -- get base conspicuousness
-    local decorations = game.object_decorations(defender)
+    local decorations = game.object_decorations(opponent)
     for _, decoration in ipairs(decorations) do
         local f = game.data(decoration).con
         if f then
-            con = math.min(f(defender, attacker, decoration), con)
+            con = math.min(f(opponent, attacker, decoration), con)
         end
     end
     -- factor bonuses
@@ -558,17 +525,43 @@ function game.person_object_per_dist(attacker, defender)
     for _, decoration in ipairs(decorations) do
         local f = game.data(decoration).per_addend
         if f then
-            con = con + f(attacker, defender, decoration)
+            con = con + f(attacker, opponent, decoration)
         end
     end
-    local decorations = game.object_decorations(defender)
+    local decorations = game.object_decorations(opponent)
     for _, decoration in ipairs(decorations) do
         local f = game.data(decoration).con_addend
         if f then
-            con = con + f(defender, attacker, decoration)
+            con = con + f(opponent, attacker, decoration)
         end
     end
     return math.max(con, 1)
+end
+
+-- person space check
+function game.person_space_check(person, space)
+    if not game.person_can_attack(person) then
+        return false
+    end
+    local decoration = person.hand or person
+    local verb = game.data(decoration).attack
+    if  verb.range and
+        verb.range(person, decoration, space)
+    then
+        return true
+    end
+    if  game.data(decoration).stab and (
+        Hex.dist(person.space, space) == 2 and
+        Hex.axis(person.space, space) and
+        not game.obstructed(
+            person.space,
+            space,
+            game.space_vacant
+        )
+    ) then
+        return true
+    end
+    return false
 end
 
 -- person can step
@@ -673,10 +666,10 @@ function game.person_teleport(person)
     local f = function (space)
         return
             game.data(space.terrain).stand and
-            not space.dst and
+            not space.door and
             not space.person
     end
-    local dst = List.filter(_state.spaces, f)[1]
+    local dst = List.filter(_state.map.spaces, f)[1]
     game.person_relocate(person, dst)
 end
 
@@ -776,41 +769,41 @@ function game.person_poststep_attack3(person, src)
 end
 
 -- get hostile persons visible to the person
-function game.person_get_defenders(attacker)
-    local f = function (defender)
+function game.person_get_opponents(person)
+    local f = function (opponent)
         return
-            defender.faction ~= attacker.faction and
-            game.person_sense(attacker, defender)
+            opponent.faction ~= person.faction and
+            game.person_sense(person, opponent)
     end
-    return List.filter(_state.persons, f)
+    return List.filter(_state.map.persons, f)
 end
 
 -- get objects visible to the person
 function game.person_get_objects(attacker)
-    local f = function (defender)
-        return game.person_sense(attacker, defender)
+    local f = function (opponent)
+        return game.person_sense(attacker, opponent)
     end
-    return List.filter(_state.objects, f)
+    return List.filter(_state.map.objects, f)
 end
 
 -- generate path
 function game.person_path(person, dst_f, stop)
-    local cost_f = game.person_cost_f(person)
-    return gridpath.dijk(_state.spaces, cost_f, dst_f, stop)
+    local dist_f = game.person_dist_f(person)
+    return gridpath.dijk(_state.map.spaces, dist_f, dst_f, stop)
 end
 
 -- person cost function (for paths)
-function game.person_cost_f(person)
+function game.person_dist_f(person)
     return 1
 end
 
 -- person steps on a path to a space, return success
-function game.person_step_to(person, dst_f, valid_f, cost_f, stop)
+function game.person_step_to(person, dst_f, valid_f, dist_f, stop)
     local path = Path.dijk(
         person.space,
         dst_f,
         valid_f,
-        cost_f,
+        dist_f,
         stop
     )
     local space = path and path[2]
@@ -830,7 +823,7 @@ function game.person_preferred_action(person, space_fs)
 end
 
 -- person steps on a path to a position for a preferred action
-function game.person_preferred_action_step(person, space_fs, cost_f)
+function game.person_preferred_action_step(person, space_fs, dist_f)
     local dst_f = function (space)
         for _, space_f in ipairs(space_fs) do
             if space_f(space) then
@@ -838,11 +831,11 @@ function game.person_preferred_action_step(person, space_fs, cost_f)
             end
         end
     end
-    return game.person_step_to(person, dst_f, game.space_stand, cost_f)
+    return game.person_step_to(person, dst_f, game.space_stand, dist_f)
 end
 
 -- person does a preferred action or steps to pos
-function game.person_do_or_step(person, pos_f, cost_f)
+function game.person_do_or_step(person, pos_f, dist_f)
     local f = pos_f(person.space)
     if f then
         return f()
@@ -851,7 +844,7 @@ function game.person_do_or_step(person, pos_f, cost_f)
             person,
             pos_f,
             game.space_stand,
-            cost_f
+            dist_f
         )
     end
 end
@@ -862,53 +855,53 @@ function game.person_top(person)
 end
 
 -- person steps on a path to the leader
-function game.person_step_to_friend(person, cost_f)
+function game.person_step_to_friend(person, dist_f)
     local dst_f = function (space)
         return Hex.dist(space, person.friends[1].space) <= 1
     end
-    return game.person_step_to(person, dst_f, game.space_stand, cost_f)
+    return game.person_step_to(person, dst_f, game.space_stand, dist_f)
 end
 
 -- person stores the positions of reachable enemies
-function game.person_store_defender_positions(person, cost_f, defenders)
+function game.person_store_opponent_positions(person, dist_f, opponents)
     person.interests = {}
-    for _, defender in ipairs(defenders) do
+    for _, opponent in ipairs(opponents) do
         local path = Path.astar(
             person.space,
-            defender.space,
+            opponent.space,
             game.space_stand,
-            cost_f
+            dist_f
         )
         if path then
-            person.interests[defender.space] = true
+            person.interests[opponent.space] = true
         end
     end
 end
 
 -- person stores a random reachable space to wander to
-function game.person_store_wherever(person, cost_f)
+function game.person_store_wherever(person, dist_f)
     local map = Path.dist(
         { person.space },
         game.space_stand,
-        cost_f,
+        dist_f,
         8 -- cost to dst < 8
     )
     local f = function (space)
         local d = map[space]
         return 0 < d and d < math.huge
     end
-    local spaces = List.filter(_state.spaces, f)
+    local spaces = List.filter(_state.map.spaces, f)
     local dst = spaces[game.rand2(#spaces)]
     person.interests = {}
     person.interests[dst] = true
 end
 
 -- person steps on a path to past-stored spaces
-function game.person_step_to_dsts(person, cost_f)
+function game.person_step_to_dsts(person, dist_f)
     local dst_f = function (space)
         return person.interests[space]
     end
-    return game.person_step_to(person, dst_f, game.space_stand, cost_f)
+    return game.person_step_to(person, dst_f, game.space_stand, dist_f)
 end
 
 -- place a status on a person
@@ -1081,7 +1074,7 @@ end
 
 -- place an object
 function game.object_enter(object, space)
-    table.insert(_state.objects, object)
+    table.insert(_state.map.objects, object)
     if space.object then
         game.object_displace(space.object)
     end
@@ -1091,7 +1084,7 @@ end
 
 -- delete an object
 function game.object_exit(object)
-    List.delete(_state.objects, object)
+    List.delete(_state.map.objects, object)
     object.space, object.space.object = nil, nil
 end
 
@@ -1155,14 +1148,14 @@ function game.object_postact(object)
     if object.space then
         game.object_expose(object)
         if game.data(object).act then
-            table.insert(_state.events, object)
+            table.insert(_state.map.events, object)
         end
     end
 end
 
 -- object updates others' sense relations
 function game.object_expose(object)
-    for _, p in ipairs(_state.persons) do
+    for _, p in ipairs(_state.map.persons) do
         game.person_object_check(p, object)
     end
 end
@@ -1227,7 +1220,39 @@ end
 -- terrain's turn ends
 function game.terrain_postact(terrain)
     if game.data(terrain).act then
-        table.insert(_state.events, terrain)
+        table.insert(_state.map.events, terrain)
     end
 end
+
+function game.space_fall(x, y)
+    local f1 = function (space)
+        return space.terrain.id == "terrain_dot"
+    end
+    local path = Path.dijk(
+        game.get_space(x, y),
+        f1,
+        glue.true_f
+    )
+end
+
+function game.person_fall(person, x, y)
+    local space = game.get_space(x, y)
+    local dst_f = function (space)
+        return space.terrain.id == "terrain_dot"
+    end
+    local path = Path.dijk(space, dst_f, glue.true_f)
+    local dst = path[#path]
+    game.person_enter(person, dst)
+end
+
+function game.object_fall(object, x, y)
+    local space = game.get_space(x, y)
+    local dst_f = function (space)
+        return space.terrain.id == "terrain_dot"
+    end
+    local path = Path.dijk(space, dst_f, glue.true_f)
+    local dst = path[#path]
+    game.object_enter(object, dst)
+end
+
 

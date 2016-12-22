@@ -43,7 +43,7 @@ function state_death.draw()
             color = { color[1], color[2] + 64, color[3] }
         end
         -- attack range
-        if state_one.threaten[space] then
+        if state_one.check[space] then
             bcolor = { bcolor[1] + 64, bcolor[2], bcolor[3] }
             color = { color[1] + 64, color[2], color[3] }
         end

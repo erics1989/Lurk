@@ -8,7 +8,7 @@ _database.encounter_person_kobold_warrior = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -22,7 +22,7 @@ _database.encounter_person_kobold_piker = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -36,7 +36,7 @@ _database.encounter_person_kobold_archer = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -50,7 +50,7 @@ _database.encounter_person_skeleton_warrior = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -64,7 +64,7 @@ _database.encounter_person_ooze = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -78,7 +78,7 @@ _database.encounter_person_dhole = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -92,7 +92,7 @@ _database.encounter_person_bear = {
         return
             game.data(space.terrain).stand and
             not game.data(space.terrain).water and
-            not space.dst and
+            not space.terrain.door and
             not space.person
     end,
     init = function (space)
@@ -106,7 +106,7 @@ _database.encounter_person_pirahna = {
         return
             game.data(space.terrain).stand and
             game.data(space.terrain).water and
-            not space.dst and
+            not space.door and
             not space.person
     end,
     init = function (space)

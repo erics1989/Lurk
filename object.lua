@@ -29,7 +29,9 @@ _database.object_shortsword = {
         "• Strafe (when you step between spaces adjacent to an enemy, you get a free\n" ..
         "  attack)"
     ,
-    part = "hand", pickup = true,
+    part = "hand",
+    pickup = true,
+    slash = true, stab = true,
     init = function (object)
         game.object_setup(object)
         object.enchant = 2
@@ -47,19 +49,19 @@ _database.object_shortsword = {
             return Hex.dist(person.space, space) == 1
         end,
         execute = function (person, object, space)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 if game.person_sense(_state.hero, person) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s stab %s." or
                             "%s stabs %s.",
                         grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(defender).name)
+                        grammar.the(game.data(opponent).name)
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
         end
     },
@@ -74,8 +76,20 @@ _database.object_shortsword = {
                 game.person_object_equip(person, object)
             end
         end
+    },
+    throw = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return Hex.dist(person.space, space) <= 4
+        end,
+        execute = function (person, object, space)
+            game.person_object_throw(person, object)
+            game.person_object_exit(person, object)
+            game.object_enter(object, space)
+        end
     }
-
 }
 
 _database.object_machete = {
@@ -90,19 +104,19 @@ _database.object_machete = {
             return Hex.dist(person.space, space) == 1
         end,
         execute = function (person, object, space)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 if game.person_sense(_state.hero, person) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s hack %s." or
                             "%s hacks %s.",
                         grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(defender).name)
+                        grammar.the(game.data(opponent).name)
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
         end
     },
@@ -134,24 +148,25 @@ _database.object_spear = {
     init = function (object)
         game.object_setup(object)
     end,
+    stab = true,
     attack = {
         range = function (person, object, space)
             return Hex.dist(person.space, space) == 1
         end,
         execute = function (person, object, space)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 if game.person_sense(_state.hero, person) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s skewer %s." or
                             "%s skewers %s.",
                         grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(defender).name)
+                        grammar.the(game.data(opponent).name)
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
         end
     },
@@ -209,19 +224,19 @@ _database.object_shortbow = {
             space = game.obstructed(
                 person.space, space, game.space_vacant
             ) or space
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 if game.person_sense(_state.hero, person) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s shoot an arrow at %s." or
                             "%s shoots an arrow at %s.",
                         grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(defender).name)
+                        grammar.the(game.data(opponent).name)
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
         end
     },
@@ -331,19 +346,19 @@ _database.object_staff_of_incineration = {
             game.person_object_use(person, object)
             game.object_discharge(object, 8)
             local space = game.person_space_proj_obstruction(person, space)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 if game.person_sense(_state.hero, person) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s incinerate %s." or
                             "%s incinerates %s.",
                         grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(defender).name)
+                        grammar.the(game.data(opponent).name)
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
             if game.data(space.terrain).burn then
                 game.terrain_exit(space.terrain)
@@ -383,9 +398,9 @@ _database.object_staff_of_distortion = {
             game.person_object_use(person, object)
             game.object_discharge(object, 8)
             local space = game.person_space_proj_obstruction(person, space)
-            local defender = space.person
-            if defender then
-                game.person_teleport(defender)
+            local opponent = space.person
+            if opponent then
+                game.person_teleport(opponent)
             end
         end
     }
@@ -421,12 +436,12 @@ _database.object_staff_of_suggestion = {
             game.person_object_use(person, object)
             game.object_discharge(object, 8)
             local space = game.person_space_proj_obstruction(person, space)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_charmed")
                 status.charmer = person
                 status.counters = 1
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end
         end
     }
@@ -462,9 +477,9 @@ _database.object_staff_of_substitution = {
             game.person_object_use(person, object)
             game.object_discharge(object, 8)
             local space = game.person_space_proj_obstruction(person, space)
-            local defender = space.person
-            if defender then
-                game.person_transpose(person, defender)
+            local opponent = space.person
+            if opponent then
+                game.person_transpose(person, opponent)
             end
         end
     }
@@ -540,7 +555,7 @@ _database.object_charm_of_verdure = {
                     game.data(space.terrain).stand and
                     not game.data(space.terrain).water
             end
-            local spaces = List.filter(_state.spaces, f)
+            local spaces = List.filter(_state.map.spaces, f)
             for _, space in ipairs(spaces) do
                 game.terrain_exit(space.terrain)
                 local terrain = game.data_init("terrain_tree")
@@ -568,9 +583,9 @@ _database.object_potion_of_health = {
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
-                game.person_damage(defender, -4)
+            local opponent = space.person
+            if opponent then
+                game.person_damage(opponent, -4)
             end
         end
     },
@@ -584,9 +599,9 @@ _database.object_potion_of_health = {
         execute = function (person, object, space)
             game.person_object_throw(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
-                game.person_damage(defender, -16)
+            local opponent = space.person
+            if opponent then
+                game.person_damage(opponent, -16)
             end        
         end
     }
@@ -609,9 +624,9 @@ _database.object_potion_of_distortion = {
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
-                game.person_teleport(defender)
+            local opponent = space.person
+            if opponent then
+                game.person_teleport(opponent)
             end        
         end
     },
@@ -625,9 +640,9 @@ _database.object_potion_of_distortion = {
         execute = function (person, object, space)
             game.person_object_throw(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
-                game.person_teleport(defender)
+            local opponent = space.person
+            if opponent then
+                game.person_teleport(opponent)
             end        
         end
     }
@@ -651,11 +666,11 @@ _database.object_potion_of_blindness = {
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_blind")
                 status.counters = 16
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end
         end
     },
@@ -669,11 +684,11 @@ _database.object_potion_of_blindness = {
         execute = function (person, object, space)
             game.person_object_throw(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_blind")
                 status.counters = 16
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end
         end
     }
@@ -698,11 +713,11 @@ _database.object_potion_of_invisibility = {
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_invisible")
                 status.counters = 16
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end
         end
     },
@@ -716,11 +731,11 @@ _database.object_potion_of_invisibility = {
         execute = function (person, object, space)
             game.person_object_throw(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_invisible")
                 status.counters = 16
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end
         end
     }
@@ -744,9 +759,9 @@ _database.object_potion_of_incineration = {
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
-                if game.person_sense(_state.hero, defender) then
+            local opponent = space.person
+            if opponent then
+                if game.person_sense(_state.hero, opponent) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s burn." or
@@ -755,7 +770,7 @@ _database.object_potion_of_incineration = {
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
             if game.data(space.terrain).burn then
                 game.terrain_exit(space.terrain)
@@ -774,9 +789,9 @@ _database.object_potion_of_incineration = {
         execute = function (person, object, space)
             game.person_object_throw(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
-                if game.person_sense(_state.hero, defender) then
+            local opponent = space.person
+            if opponent then
+                if game.person_sense(_state.hero, opponent) then
                     local str = string.format(
                         game.data(person).plural and
                             "%s burn." or
@@ -785,7 +800,7 @@ _database.object_potion_of_incineration = {
                     )
                     game.print(str)
                 end
-                game.person_damage(defender, 1)
+                game.person_damage(opponent, 1)
             end
             if game.data(space.terrain).burn then
                 game.terrain_exit(space.terrain)
@@ -814,11 +829,11 @@ _database.object_potion_of_domination = {
         execute = function (person, object, space)
             game.person_object_use(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_charmed")
                 status.charmer = person
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end
         end
     },
@@ -832,11 +847,11 @@ _database.object_potion_of_domination = {
         execute = function (person, object, space)
             game.person_object_throw(person, object)
             game.person_object_exit(person, object)
-            local defender = space.person
-            if defender then
+            local opponent = space.person
+            if opponent then
                 local status = game.data_init("status_charmed")
                 status.charmer = person
-                game.person_status_enter(defender, status)
+                game.person_status_enter(opponent, status)
             end    
         end
     }
