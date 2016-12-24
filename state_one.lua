@@ -3,12 +3,15 @@
 
 state_one = {}
 
-HS = 24
+HS = 25
 
 function state_one.init()
     state_one.sprites = true
-    local px, py = Hex.pos({ x = BOARD_SIZE, y = BOARD_SIZE }, HS)
-    state_one.camera = { px = px - 360, py = py - 360 }
+    local px, py = Hex.pos({ x = 0, y = 0 }, HS)
+    state_one.camera = { px = px - 400, py = py - 360 }
+    state_one.persons = {}
+    state_one.person_prev = {}
+    state_one.person_prev_space = {}
     state_one.fov = {}
     state_one.perception = {}
     state_one.check = {}
@@ -17,6 +20,7 @@ function state_one.init()
     state_one.describe = nil
     state_one.timer = 0
     state_one.mouse = false
+    state_one.animate = 0
     state_one.process_map()
 end
 
@@ -55,9 +59,9 @@ function state_one.keypressed(k)
     elseif k == "j" or k == "kp2" then
         state_one.step(0, 1) 
     elseif k == "y" or k == "kp7" then
-        state_one.step(-1, 0)
+        state_one.step(0, -1)
     elseif k == "n" or k == "kp3" then
-        state_one.step(1, 0)
+        state_one.step(0, 1) 
     elseif k == "b" or k == "kp1" then
         state_one.step(-1, 1)
     elseif k == "u" or k == "kp9" then
@@ -455,6 +459,7 @@ function state_one.step(dx, dy)
             if space.person then
                 if space.person.faction ~= _state.hero.faction then
                     if game.person_can_attack(_state.hero) then
+                        state_one.preact()
                         game.person_attack(_state.hero, space)
                         state_one.postact()
                     else
@@ -463,6 +468,7 @@ function state_one.step(dx, dy)
                     end
                 else
                     if game.person_can_step(_state.hero) then 
+                        state_one.preact()
                         game.person_transpose(_state.hero, space.person)
                         state_one.postact()
                     else
@@ -472,6 +478,7 @@ function state_one.step(dx, dy)
                 end
             else
                 if game.person_can_step(_state.hero) then
+                    state_one.preact()
                     game.person_step(_state.hero, space)
                     state_one.postact()
                 else
@@ -487,6 +494,7 @@ end
 function state_one.rest()
     local str = "You wait."
     game.print(str)
+    state_one.preact()
     game.person_rest(_state.hero)
     state_one.postact()
 end
@@ -498,6 +506,24 @@ function state_one.pickup()
         game.person_object_pickup(_state.hero, object)
     end
     game.flush()
+end
+
+function state_one.preact()
+    _state.animations = {}
+    state_one.store_state()
+end
+
+function state_one.store_state()
+    state_one.persons = {}
+    state_one.person_prev = {}
+    state_one.person_prev_space = {}
+    for _, person in ipairs(_state.map.persons) do
+        if state_one.sense[person] then
+            table.insert(state_one.persons, person)
+            state_one.person_prev[person] = true
+            state_one.person_prev_space[person] = person.space
+        end
+    end
 end
 
 -- end the turn
@@ -522,6 +548,7 @@ function state_one.postact()
         state_death.init()
         table.insert(states, state_death)
     end
+    state_one.animate = 0
 end
 
 -- process the map
@@ -608,11 +635,8 @@ function state_one.process_check_map()
 end
 
 function state_one.update(t)
-    state_one.animate(t)
-end
-
-function state_one.animate(t)
     state_one.timer = state_one.timer + t
+    state_one.animate = state_one.animate + t
 end
 
 function state_one.draw()
@@ -680,6 +704,117 @@ function state_one.draw_map(highlightF)
             abstraction.print(character, dx, dy)
         end
     end
+    state_one.draw_persons()
+    state_one.draw_animations()
+end
+
+function state_one.draw_persons()
+    local f = function (person)
+        return state_one.sense[person]
+    end
+    local persons = List.filter(_state.map.persons, f)
+    for _, person in ipairs(persons) do
+        local prev = state_one.person_prev_space[person]
+        if prev and state_one.animate <= 60/60 then
+            love.graphics.setColor(color_constants.base3)
+            local sprite = game.data(person).sprite
+
+            local t = state_one.animate
+
+            local ax, ay = Hex.pos(prev, HS)
+            local bx, by = Hex.pos(person.space, HS)
+            local px = glue.lerp(ax, bx, t)
+            local py = glue.lerp(ay, by, t)
+            px = px - state_one.camera.px
+            py = py - state_one.camera.py
+            
+            love.graphics.draw(
+                sprites[sprite.file].sheet,
+                sprites[sprite.file][sprite.x][sprite.y],
+                px - 8, py - 12
+            )
+
+        elseif state_one.animate <= 60/60 then
+            local sprite = game.data(person).sprite
+
+            local t = state_one.animate
+
+            local px, py = Hex.pos(person.space, HS)
+            px = px - state_one.camera.px
+            py = py - state_one.camera.py
+            
+            local color = List.copy(color_constants.base3)
+            color[4] = glue.lerp(0, 100, t)
+            love.graphics.setColor(color)
+
+            love.graphics.draw(
+                sprites[sprite.file].sheet,
+                sprites[sprite.file][sprite.x][sprite.y],
+                px - 8, py - 12
+            )
+        else
+            love.graphics.setColor(color_constants.base3)
+            local sprite = game.data(person).sprite
+            local px, py = Hex.pos(person.space, HS)
+            px = px - state_one.camera.px
+            py = py - state_one.camera.py
+            love.graphics.draw(
+                sprites[sprite.file].sheet,
+                sprites[sprite.file][sprite.x][sprite.y],
+                px - 8, py - 12
+            )
+        end
+    end
+
+    local f = function (person)
+        return not person.space or not state_one.sense[person]
+    end
+    local persons = List.filter(state_one.persons, f)
+    for _, person in ipairs(persons) do
+        local prev = state_one.person_prev_space[person]
+        if prev and state_one.animate <= 60/60 then
+            local sprite = game.data(person).sprite
+
+            local t = state_one.animate
+
+            local px, py = Hex.pos(prev, HS)
+            px = px - state_one.camera.px
+            py = py - state_one.camera.py
+            local color = List.copy(color_constants.base3)
+            color[4] = glue.lerp(100, 0, t)
+            love.graphics.setColor(color)
+
+            love.graphics.draw(
+                sprites[sprite.file].sheet,
+                sprites[sprite.file][sprite.x][sprite.y],
+                px - 8, py - 12
+            )
+        end
+    end
+
+end
+
+function state_one.draw_animations()
+    if state_one.animate <= 60/60 then
+        for _, animation in ipairs(_state.animations) do
+            local proto = game.data(animation)
+            local len = #proto.sprites
+            local i = math.ceil(state_one.animate * len)
+            local sprite = proto.sprites[i]
+            local space = animation.space
+            
+            local px, py = Hex.pos(space, HS)
+            px = px - state_one.camera.px
+            py = py - state_one.camera.py
+            
+            love.graphics.setColor(color_constants.base3)
+            love.graphics.draw(
+                sprites[sprite.file].sheet,
+                sprites[sprite.file][sprite.x][sprite.y],
+                px - 8, py - 12
+            )
+        end
+    end
 end
 
 -- get the representation of a space for printing
@@ -704,6 +839,7 @@ function state_one.space_representation(space, anim)
             anim == 2 and game.data(space.terrain).sprite2 or
             game.data(space.terrain).sprite
         if state_one.fov[space] then
+            --[[
             if  space.person and
                 state_one.sense[space.person]
             then
@@ -713,6 +849,8 @@ function state_one.space_representation(space, anim)
                     anim == 2 and game.data(space.person).sprite2 or
                     game.data(space.person).sprite
             elseif
+            ]]
+            if
                 space.object and
                 state_one.sense[space.object]
             then
@@ -734,7 +872,6 @@ function state_one.space_representation(space, anim)
 end
 
 -- draw a hex
---[[
 function state_one.draw_hex(px, py)
     love.graphics.polygon(
         "fill",
@@ -766,47 +903,48 @@ function state_one.draw_hex(px, py)
         py + (HS - 1) * math.sin(math.pi * 3/2),
         px + (HS - 1) * math.cos(math.pi * 11/6),
         py + (HS - 1) * math.sin(math.pi * 11/6)
-    )
-    love.graphics.setLineWidth(1)
-end
-]]
-function state_one.draw_hex(px, py)
-    love.graphics.polygon(
-        "fill",
-        px + (HS - 1) * math.cos(math.pi * 0/6),
-        py + (HS - 1) * math.sin(math.pi * 0/6),
-        px + (HS - 1) * math.cos(math.pi * 2/6),
-        py + (HS - 1) * math.sin(math.pi * 2/6),
-        px + (HS - 1) * math.cos(math.pi * 4/6),
-        py + (HS - 1) * math.sin(math.pi * 4/6),
-        px + (HS - 1) * math.cos(math.pi * 6/6),
-        py + (HS - 1) * math.sin(math.pi * 6/6),
-        px + (HS - 1) * math.cos(math.pi * 8/6),
-        py + (HS - 1) * math.sin(math.pi * 8/6),
-        px + (HS - 1) * math.cos(math.pi * 10/6),
-        py + (HS - 1) * math.sin(math.pi * 10/6)
-    )
-    love.graphics.setLineWidth(2)
-    love.graphics.polygon(
-        "line",
-        px + (HS - 1) * math.cos(math.pi * 0/6),
-        py + (HS - 1) * math.sin(math.pi * 0/6),
-        px + (HS - 1) * math.cos(math.pi * 2/6),
-        py + (HS - 1) * math.sin(math.pi * 2/6),
-        px + (HS - 1) * math.cos(math.pi * 4/6),
-        py + (HS - 1) * math.sin(math.pi * 4/6),
-        px + (HS - 1) * math.cos(math.pi * 6/6),
-        py + (HS - 1) * math.sin(math.pi * 6/6),
-        px + (HS - 1) * math.cos(math.pi * 8/6),
-        py + (HS - 1) * math.sin(math.pi * 8/6),
-        px + (HS - 1) * math.cos(math.pi * 10/6),
-        py + (HS - 1) * math.sin(math.pi * 10/6)
     )
     love.graphics.setLineWidth(1)
 end
 
--- draw a hex outline
 --[[
+function state_one.draw_hex(px, py)
+    love.graphics.polygon(
+        "fill",
+        px + (HS - 1) * math.cos(math.pi * 0/6),
+        py + (HS - 1) * math.sin(math.pi * 0/6),
+        px + (HS - 1) * math.cos(math.pi * 2/6),
+        py + (HS - 1) * math.sin(math.pi * 2/6),
+        px + (HS - 1) * math.cos(math.pi * 4/6),
+        py + (HS - 1) * math.sin(math.pi * 4/6),
+        px + (HS - 1) * math.cos(math.pi * 6/6),
+        py + (HS - 1) * math.sin(math.pi * 6/6),
+        px + (HS - 1) * math.cos(math.pi * 8/6),
+        py + (HS - 1) * math.sin(math.pi * 8/6),
+        px + (HS - 1) * math.cos(math.pi * 10/6),
+        py + (HS - 1) * math.sin(math.pi * 10/6)
+    )
+    love.graphics.setLineWidth(2)
+    love.graphics.polygon(
+        "line",
+        px + (HS - 1) * math.cos(math.pi * 0/6),
+        py + (HS - 1) * math.sin(math.pi * 0/6),
+        px + (HS - 1) * math.cos(math.pi * 2/6),
+        py + (HS - 1) * math.sin(math.pi * 2/6),
+        px + (HS - 1) * math.cos(math.pi * 4/6),
+        py + (HS - 1) * math.sin(math.pi * 4/6),
+        px + (HS - 1) * math.cos(math.pi * 6/6),
+        py + (HS - 1) * math.sin(math.pi * 6/6),
+        px + (HS - 1) * math.cos(math.pi * 8/6),
+        py + (HS - 1) * math.sin(math.pi * 8/6),
+        px + (HS - 1) * math.cos(math.pi * 10/6),
+        py + (HS - 1) * math.sin(math.pi * 10/6)
+    )
+    love.graphics.setLineWidth(1)
+end
+]]
+-- draw a hex outline
+
 function state_one.draw_hex_outline(px, py)
     love.graphics.setColor(color_constants.base3)
     love.graphics.setLineWidth(2)
@@ -826,8 +964,8 @@ function state_one.draw_hex_outline(px, py)
         py + (HS - 2) * math.sin(math.pi * 11/6)
     )
 end
-]]
 
+--[[
 function state_one.draw_hex_outline(px, py)
     love.graphics.setColor(color_constants.base3)
     love.graphics.setLineWidth(2)
@@ -848,6 +986,7 @@ function state_one.draw_hex_outline(px, py)
 
     )
 end
+]]
 
 -- draw the game messages
 function state_one.draw_notes()

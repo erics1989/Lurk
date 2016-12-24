@@ -8,6 +8,10 @@ local function adjacent(space)
     return Hex.adjacent(space)
 end
 
+local function valid_f0(space)
+    return true
+end
+
 -- default cost between adjacent spaces
 local function d_dist_f(space1, space2)
     return 1
@@ -20,6 +24,7 @@ end
 
 -- distance map
 function Path.dist(srcs, valid_f, dist_f, stop)
+    valid_f = valid_f or valid_f0
     dist_f = dist_f or d_dist_f
     stop = stop or math.huge
     local dist = {}
@@ -60,7 +65,8 @@ function Path.dist(srcs, valid_f, dist_f, stop)
 end
 
 -- dijkstra
-function Path.dijk(src, dst_f, valid_f, dist_f, stop)
+function Path.dijk(srcs, dst_f, valid_f, dist_f, stop)
+    valid_f = valid_f or valid_f0
     dist_f = dist_f or d_dist_f
     stop = stop or math.huge
     local dist = {}
@@ -78,8 +84,10 @@ function Path.dijk(src, dst_f, valid_f, dist_f, stop)
             qset[space] = true
         end
     end
-    if valid_f(src) then
-        dist[src] = 0
+    for _, src in ipairs(srcs) do
+        if valid_f(src) then
+            dist[src] = 0
+        end
     end
     while next(q) do
         List.heap(q, cf)
@@ -102,6 +110,7 @@ end
 
 -- A*
 function Path.astar(src, dst, valid_f, dist_f, stop, heuristic)
+    valid_f = valid_f or valid_f0
     dist_f = dist_f or d_dist_f
     stop = stop or math.huge
     heuristic = heuristic or astar_heuristic

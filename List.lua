@@ -3,6 +3,32 @@
 
 local List = {}
 
+function List.sort(a, f)
+    local b = List.copy(a)
+    table.sort(b, f)
+    return b
+end
+
+function List.min(a, f)
+    local min = a[1]
+    for _, v in ipairs(a) do
+        if f(v, min) then
+            min = v
+        end
+    end
+    return min
+end
+
+function List.max(a, f)
+    local max = a[1]
+    for _, v in ipairs(a) do
+        if f(max, v) then
+            max = v
+        end
+    end
+    return max
+end
+
 function List.contains(l, v1)
     assert(l and v1)
     for i, v2 in ipairs(l) do
@@ -102,6 +128,17 @@ function List.fold(l, f, acc)
         end
     end
     return acc
+end
+
+function List.unique(a)
+    local b = {}
+    local set = {}
+    for _, v in ipairs(a) do
+        if not set[v] then
+            table.insert(b, v)
+        end
+    end
+    return b
 end
 
 function List.intersection(l1, l2)

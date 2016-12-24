@@ -17,6 +17,7 @@ function game.init()
     _state.past_notes = {}
     _state.turn = 0
     _state.postpone = {}
+    _state.animations = {}
 
     game.print("(press [?] for controls, hints)")
     
@@ -25,7 +26,7 @@ function game.init()
 
     -- enter branch zero
     local f = function ()
-        game.person_enter(_state.hero, game.get_space(9, 17))
+        game.person_enter(_state.hero, game.get_space(0, 0))
     end
     game.map_enter("dungeon", 1, f)
 
@@ -35,13 +36,13 @@ function game.init()
 end
 
 -- rng for level generation
-function game.rand1(n)
-    return _state.rand1:random(n)
+function game.rand1(a, b)
+    return _state.rand1:random(a, b)
 end
 
 -- rng for non-level generation
-function game.rand2(n)
-    return _state.rand2:random(n)
+function game.rand2(a, b)
+    return _state.rand2:random(a, b)
 end
 
 -- push a game message
@@ -58,6 +59,8 @@ end
 
 -- get a game object's parent
 function game.data(object)
+    assert(object)
+    assert(_database[object.id])
     return _database[object.id]
 end
 
@@ -277,7 +280,7 @@ end
 
 -- nearest space
 function game.nearest_space(space, valid_f, dist_f)
-    local path = Path.dijk(space, valid_f, glue.true_f)
+    local path = Path.dijk({ space }, valid_f, glue.true_f)
     assert(next(path))
     return path[#path]
 end
@@ -596,6 +599,9 @@ function game.person_attack(person, space)
     assert(verb)
     assert(verb.range(person, decoration, space))
     verb.execute(person, decoration, space)
+    local animation = game.data_init("animation_attack")
+    animation.space = space
+    table.insert(_state.animations, animation)
     return true
 end
 
@@ -608,7 +614,7 @@ function game.person_displace(person)
             game.data(space.terrain).stand and
             not space.person
     end
-    local path = Path.dijk(person.space, dst_f, game.space_stand)
+    local path = Path.dijk({ person.space }, dst_f, game.space_stand)
     if path then
         for i = #path, 2 do
             local dst = path[i]
@@ -786,12 +792,6 @@ function game.person_get_objects(attacker)
     return List.filter(_state.map.objects, f)
 end
 
--- generate path
-function game.person_path(person, dst_f, stop)
-    local dist_f = game.person_dist_f(person)
-    return gridpath.dijk(_state.map.spaces, dist_f, dst_f, stop)
-end
-
 -- person cost function (for paths)
 function game.person_dist_f(person)
     return 1
@@ -800,7 +800,7 @@ end
 -- person steps on a path to a space, return success
 function game.person_step_to(person, dst_f, valid_f, dist_f, stop)
     local path = Path.dijk(
-        person.space,
+        { person.space },
         dst_f,
         valid_f,
         dist_f,
@@ -1185,7 +1185,7 @@ function game.object_displace(object)
             game.data(space.terrain).stand and
             not space.object
     end
-    local path = Path.dijk(object.space, dst_f, game.space_stand)
+    local path = Path.dijk({ object.space }, dst_f, game.space_stand)
     if path then
         for i = #path, 2 do
             local dst = path[i]
@@ -1229,7 +1229,7 @@ function game.space_fall(x, y)
         return space.terrain.id == "terrain_dot"
     end
     local path = Path.dijk(
-        game.get_space(x, y),
+        { game.get_space(x, y) },
         f1,
         glue.true_f
     )
@@ -1240,7 +1240,7 @@ function game.person_fall(person, x, y)
     local dst_f = function (space)
         return space.terrain.id == "terrain_dot"
     end
-    local path = Path.dijk(space, dst_f, glue.true_f)
+    local path = Path.dijk({ space }, dst_f, glue.true_f)
     local dst = path[#path]
     game.person_enter(person, dst)
 end
@@ -1250,7 +1250,7 @@ function game.object_fall(object, x, y)
     local dst_f = function (space)
         return space.terrain.id == "terrain_dot"
     end
-    local path = Path.dijk(space, dst_f, glue.true_f)
+    local path = Path.dijk({ space }, dst_f, glue.true_f)
     local dst = path[#path]
     game.object_enter(object, dst)
 end
