@@ -113,7 +113,7 @@ function state_menu.update(t)
         end
         py = py + h
     end
-    state_one.animate(t)
+    state_one.update(t)
 end
 
 function state_menu.draw()

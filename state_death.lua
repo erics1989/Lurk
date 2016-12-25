@@ -32,7 +32,7 @@ function state_death.restart()
 end
 
 function state_death.update(t)
-    state_one.animate(t)
+    state_one.update(t)
 end
 
 function state_death.draw()

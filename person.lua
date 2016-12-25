@@ -23,6 +23,20 @@ _database.hero = {
 
         local object = game.data_init("object_staff_of_distortion")
         game.person_object_enter(person, object)
+        local object = game.data_init("object_potion_of_health")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_potion_of_incineration")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_potion_of_invisibility")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_staff_of_suggestion")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_charm_of_passage")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_potion_of_blindness")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_staff_of_incineration")
+        game.person_object_enter(person, object)
 
         person.faction = "hero"
     end,

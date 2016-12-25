@@ -3,12 +3,14 @@
 
 state_one = {}
 
-HS = 25
+HS = 24
+SIDEBAR_X = 960
+
 
 function state_one.init()
     state_one.sprites = true
     local px, py = Hex.pos({ x = 0, y = 0 }, HS)
-    state_one.camera = { px = px - 400, py = py - 360 }
+    state_one.camera = { px = px - 480, py = py - 360 }
     state_one.persons = {}
     state_one.person_prev = {}
     state_one.person_prev_space = {}
@@ -21,6 +23,14 @@ function state_one.init()
     state_one.timer = 0
     state_one.mouse = false
     state_one.animate = 0
+    state_one.records = {}
+    state_one.animations = {}
+
+    state_one.prev_fov = {}
+    state_one.fov = {}
+
+
+
     state_one.process_map()
 end
 
@@ -333,6 +343,7 @@ function state_one.verb_execute(verb, object)
         state_aim.init(verb, object)
         table.insert(states, state_aim)
     else
+        state_one.preact()
         verb.execute(_state.hero, object, _state.hero.space)
         state_one.postact()
     end
@@ -429,19 +440,7 @@ function state_one.path_init(dst)
     local valid_f = function (space)
         return _state.map.visited[space] and game.space_stand(space)
     end
-    local heuristic = function (src, dst)
-        local ax, ay = Hex.pos(src, 1)
-        local bx, by = Hex.pos(dst, 1)
-        return math.sqrt(ax, ay, bx, by)
-    end
-    state_one.path = Path.astar(
-        _state.hero.space,
-        dst,
-        valid_f,
-        nil,
-        nil,
-        heuristic
-    )
+    state_one.path = Path.astar({ _state.hero.space }, dst, valid_f)
     if state_one.path then
         state_one.path_set = List.set(state_one.path)
     else
@@ -509,8 +508,8 @@ function state_one.pickup()
 end
 
 function state_one.preact()
-    _state.animations = {}
     state_one.store_state()
+    state_one.store_fov()
 end
 
 function state_one.store_state()
@@ -526,6 +525,10 @@ function state_one.store_state()
     end
 end
 
+function state_one.store_fov()
+    state_one.prev_fov = state_one.fov
+end
+
 -- end the turn
 function state_one.postact()
     local object = _state.hero.space.object
@@ -536,7 +539,9 @@ function state_one.postact()
     then
         game.person_object_pickup(_state.hero, object)
     end
+    
     game.rotate()
+
     if _state.hero.door then
         game.descend(_state.hero.space)
         _state.hero.door = nil
@@ -548,7 +553,23 @@ function state_one.postact()
         state_death.init()
         table.insert(states, state_death)
     end
+
+    state_one.records = List.copy(_state.records)
+    _state.records = {}
+    state_one.animations = {}
+    state_one.push_animations()
     state_one.animate = 0
+end
+
+function state_one.push_animations()
+    for _, record in ipairs(state_one.records) do
+        if record.name == "attack" then
+            local animation = game.data_init("animation_attack")
+            animation.space = record.space
+            table.insert(state_one.animations, animation)
+        end
+    end
+    state_one.records = {}
 end
 
 -- process the map
@@ -636,7 +657,7 @@ end
 
 function state_one.update(t)
     state_one.timer = state_one.timer + t
-    state_one.animate = state_one.animate + t
+    state_one.animate = state_one.animate + t * 60/10
 end
 
 function state_one.draw()
@@ -667,11 +688,165 @@ function state_one.draw()
         return bcolor, color, character
     end
     state_one.draw_map(highlight)
+    state_one.draw_persons()
+    state_one.draw_animations()
+
     state_one.draw_notes()
     state_one.draw_sidebar()
 end
 
 -- draw the map
+function state_one.draw_map()
+    for _, space in ipairs(_state.map.spaces) do
+        local proto = game.data(space.terrain)
+        local c1 = List.copy(proto.bcolor)
+        local c2 = List.copy(proto.color)
+        local s = proto.sprite
+        
+        if state_one.animate < 1 then
+            local fov1 = state_one.prev_fov[space]
+            local fov2 = state_one.fov[space]
+            if fov1 and fov2 then
+                -- pass
+            elseif fov1 then
+                c1[4] = glue.lerp(100, 50, state_one.animate)
+                c2[4] = glue.lerp(100, 50, state_one.animate)
+            elseif fov2 then
+                c1[4] = glue.lerp(50, 100, state_one.animate)
+                c2[4] = glue.lerp(50, 100, state_one.animate)
+            else
+                c1[4] = 50
+                c2[4] = 50
+            end
+        else
+            if state_one.fov[space] then
+                -- pass
+            else
+                c1[4] = 50
+                c2[4] = 50
+            end
+        end
+        
+        local px, py = Hex.pos(space, HS)
+        px = px - state_one.camera.px
+        py = py - state_one.camera.py
+
+        abstraction.set_color(c1)
+        state_one.draw_hex(px, py)
+        
+        abstraction.set_color(c2)
+        abstraction.draw(
+            sprites[s.file].sheet,
+            sprites[s.file][s.x][s.y],
+            px - 8, py - 12
+        )
+    end
+end
+
+function state_one.draw_persons()
+    if state_one.animate < 1 then
+        local persons = List.filter(
+            _state.map.persons,
+            function (person) return state_one.sense[person] end
+        )
+        for _, person in ipairs(persons) do
+            local proto = game.data(person)
+            local s = proto.sprite
+            local prev = state_one.person_prev_space[person]
+            if prev then
+                abstraction.set_color(proto.color)
+                local ax, ay = state_one.get_px(prev)
+                local bx, by = state_one.get_px(person.space)
+                local px = glue.lerp(ax, bx, state_one.animate)
+                local py = glue.lerp(ay, by, state_one.animate)
+                abstraction.draw(
+                    sprites[s.file].sheet,
+                    sprites[s.file][s.x][s.y],
+                    px - 8, py - 12
+                )
+            else
+                local c = List.copy(proto.color)
+                c[4] = glue.lerp(0, 100, state_one.animate)
+                abstraction.set_color(c)
+                local px, py = state_one.get_px(person.space)
+                abstraction.draw(
+                    sprites[s.file].sheet,
+                    sprites[s.file][s.x][s.y],
+                    px - 8, py - 12
+                )
+            end
+        end
+        local persons = List.filter(
+            state_one.persons,
+            function (person)
+                return not person.space or not state_one.sense[person]
+            end
+        )
+        for _, person in ipairs(persons) do
+            local proto = game.data(person)
+            local c = List.copy(proto.color)
+            local s = proto.sprite
+            local prev = state_one.person_prev_space[person]
+            c[4] = glue.lerp(100, 0, state_one.animate)
+            abstraction.set_color(c)
+            local px, py = state_one.get_px(prev)
+            abstraction.draw(
+                sprites[s.file].sheet,
+                sprites[s.file][s.x][s.y],
+                px - 8, py - 12
+            )
+        end
+    else
+        local persons = List.filter(
+            _state.map.persons,
+            function (person) return state_one.sense[person] end
+        )
+        for _, person in ipairs(persons) do
+            local proto = game.data(person)
+            local s = proto.sprite
+            abstraction.set_color(proto.color)
+            local px, py = state_one.get_px(person.space)
+            abstraction.draw(
+                sprites[s.file].sheet,
+                sprites[s.file][s.x][s.y],
+                px - 8, py - 12
+            )
+        end
+    end
+end
+
+function state_one.get_px(space)
+    local px, py = Hex.pos(space, HS)
+    px = px - state_one.camera.px
+    py = py - state_one.camera.py
+    return px, py
+end
+
+function state_one.draw_animations()
+    if state_one.animate < 1 then
+        for _, animation in ipairs(state_one.animations) do
+            local proto = game.data(animation)
+            local len = #proto.sprites
+            local i = math.ceil(state_one.animate * len)
+            local sprite = proto.sprites[i]
+            local space = animation.space
+            
+            local px, py = Hex.pos(space, HS)
+            px = px - state_one.camera.px
+            py = py - state_one.camera.py
+            
+            love.graphics.setColor(color_constants.base3)
+            love.graphics.draw(
+                sprites[sprite.file].sheet,
+                sprites[sprite.file][sprite.x][sprite.y],
+                px - 8, py - 12
+            )
+        end
+    end
+end
+
+-- draw the map
+--[[
 function state_one.draw_map(highlightF)
     local anim = state_one.timer % 1 <= 0.5 and 1 or 2
     love.graphics.setFont(fonts.monospace)
@@ -704,120 +879,11 @@ function state_one.draw_map(highlightF)
             abstraction.print(character, dx, dy)
         end
     end
-    state_one.draw_persons()
-    state_one.draw_animations()
 end
-
-function state_one.draw_persons()
-    local f = function (person)
-        return state_one.sense[person]
-    end
-    local persons = List.filter(_state.map.persons, f)
-    for _, person in ipairs(persons) do
-        local prev = state_one.person_prev_space[person]
-        if prev and state_one.animate <= 60/60 then
-            love.graphics.setColor(color_constants.base3)
-            local sprite = game.data(person).sprite
-
-            local t = state_one.animate
-
-            local ax, ay = Hex.pos(prev, HS)
-            local bx, by = Hex.pos(person.space, HS)
-            local px = glue.lerp(ax, bx, t)
-            local py = glue.lerp(ay, by, t)
-            px = px - state_one.camera.px
-            py = py - state_one.camera.py
-            
-            love.graphics.draw(
-                sprites[sprite.file].sheet,
-                sprites[sprite.file][sprite.x][sprite.y],
-                px - 8, py - 12
-            )
-
-        elseif state_one.animate <= 60/60 then
-            local sprite = game.data(person).sprite
-
-            local t = state_one.animate
-
-            local px, py = Hex.pos(person.space, HS)
-            px = px - state_one.camera.px
-            py = py - state_one.camera.py
-            
-            local color = List.copy(color_constants.base3)
-            color[4] = glue.lerp(0, 100, t)
-            love.graphics.setColor(color)
-
-            love.graphics.draw(
-                sprites[sprite.file].sheet,
-                sprites[sprite.file][sprite.x][sprite.y],
-                px - 8, py - 12
-            )
-        else
-            love.graphics.setColor(color_constants.base3)
-            local sprite = game.data(person).sprite
-            local px, py = Hex.pos(person.space, HS)
-            px = px - state_one.camera.px
-            py = py - state_one.camera.py
-            love.graphics.draw(
-                sprites[sprite.file].sheet,
-                sprites[sprite.file][sprite.x][sprite.y],
-                px - 8, py - 12
-            )
-        end
-    end
-
-    local f = function (person)
-        return not person.space or not state_one.sense[person]
-    end
-    local persons = List.filter(state_one.persons, f)
-    for _, person in ipairs(persons) do
-        local prev = state_one.person_prev_space[person]
-        if prev and state_one.animate <= 60/60 then
-            local sprite = game.data(person).sprite
-
-            local t = state_one.animate
-
-            local px, py = Hex.pos(prev, HS)
-            px = px - state_one.camera.px
-            py = py - state_one.camera.py
-            local color = List.copy(color_constants.base3)
-            color[4] = glue.lerp(100, 0, t)
-            love.graphics.setColor(color)
-
-            love.graphics.draw(
-                sprites[sprite.file].sheet,
-                sprites[sprite.file][sprite.x][sprite.y],
-                px - 8, py - 12
-            )
-        end
-    end
-
-end
-
-function state_one.draw_animations()
-    if state_one.animate <= 60/60 then
-        for _, animation in ipairs(_state.animations) do
-            local proto = game.data(animation)
-            local len = #proto.sprites
-            local i = math.ceil(state_one.animate * len)
-            local sprite = proto.sprites[i]
-            local space = animation.space
-            
-            local px, py = Hex.pos(space, HS)
-            px = px - state_one.camera.px
-            py = py - state_one.camera.py
-            
-            love.graphics.setColor(color_constants.base3)
-            love.graphics.draw(
-                sprites[sprite.file].sheet,
-                sprites[sprite.file][sprite.x][sprite.y],
-                px - 8, py - 12
-            )
-        end
-    end
-end
+]]
 
 -- get the representation of a space for printing
+--[[
 function state_one.space_representation(space, anim)
     local bcolor, color, character, sprite
     if _state.map.visited[space] then
@@ -839,7 +905,6 @@ function state_one.space_representation(space, anim)
             anim == 2 and game.data(space.terrain).sprite2 or
             game.data(space.terrain).sprite
         if state_one.fov[space] then
-            --[[
             if  space.person and
                 state_one.sense[space.person]
             then
@@ -849,7 +914,6 @@ function state_one.space_representation(space, anim)
                     anim == 2 and game.data(space.person).sprite2 or
                     game.data(space.person).sprite
             elseif
-            ]]
             if
                 space.object and
                 state_one.sense[space.object]
@@ -870,24 +934,26 @@ function state_one.space_representation(space, anim)
     end
     return bcolor, color, character, sprite
 end
+]]
 
 -- draw a hex
 function state_one.draw_hex(px, py)
     love.graphics.polygon(
         "fill",
-        px + (HS - 1) * math.cos(math.pi * 1/6),
-        py + (HS - 1) * math.sin(math.pi * 1/6),
-        px + (HS - 1) * math.cos(math.pi * 1/2),
-        py + (HS - 1) * math.sin(math.pi * 1/2),
-        px + (HS - 1) * math.cos(math.pi * 5/6),
-        py + (HS - 1) * math.sin(math.pi * 5/6),
-        px + (HS - 1) * math.cos(math.pi * 7/6),
-        py + (HS - 1) * math.sin(math.pi * 7/6),
-        px + (HS - 1) * math.cos(math.pi * 3/2),
-        py + (HS - 1) * math.sin(math.pi * 3/2),
-        px + (HS - 1) * math.cos(math.pi * 11/6),
-        py + (HS - 1) * math.sin(math.pi * 11/6)
+        px + HS * math.cos(math.pi * 1/6),
+        py + HS * math.sin(math.pi * 1/6),
+        px + HS * math.cos(math.pi * 1/2),
+        py + HS * math.sin(math.pi * 1/2),
+        px + HS * math.cos(math.pi * 5/6),
+        py + HS * math.sin(math.pi * 5/6),
+        px + HS * math.cos(math.pi * 7/6),
+        py + HS * math.sin(math.pi * 7/6),
+        px + HS * math.cos(math.pi * 3/2),
+        py + HS * math.sin(math.pi * 3/2),
+        px + HS * math.cos(math.pi * 11/6),
+        py + HS * math.sin(math.pi * 11/6)
     )
+    --[[
     love.graphics.setLineWidth(2)
     love.graphics.polygon(
         "line",
@@ -905,6 +971,7 @@ function state_one.draw_hex(px, py)
         py + (HS - 1) * math.sin(math.pi * 11/6)
     )
     love.graphics.setLineWidth(1)
+    ]]
 end
 
 --[[
@@ -1010,11 +1077,9 @@ end
 
 -- draw the sidebar
 function state_one.draw_sidebar()
-    love.graphics.setColor(0, 0, 0)
-    love.graphics.rectangle("fill", 960, 0, 320, 720)
     love.graphics.setFont(fonts.monospace)
     
-    local px = 960 + 12
+    local px = SIDEBAR_X + 12
     local py = 12
     local w = abstraction.font_w(fonts.monospace)
     local h = abstraction.font_h(fonts.monospace)
@@ -1045,7 +1110,7 @@ function state_one.draw_sidebar()
         end
         px = px + 2 * w
     end
-    px = 960 + 12
+    px = SIDEBAR_X + 12
     py = py + 1 * h
 
     love.graphics.setColor(color_constants.base1)
@@ -1119,7 +1184,10 @@ function state_one.draw_sidebar()
     end
     py = py + 1 * h
 
+
+    state_one.draw_sidebar_objects()
     -- opponents
+    --[[
     local opponents = List.concat(
         state_one.opponents,
         game.person_get_objects(_state.hero)
@@ -1141,6 +1209,7 @@ function state_one.draw_sidebar()
         py = py + 1 * h
     end
     py = py + 1 * h
+    ]]
 
     -- turn
     --[[
@@ -1150,6 +1219,7 @@ function state_one.draw_sidebar()
     ]]--
 
     -- open rucksack
+    --[[
     px = 960 + 12
     py = 720 - 12 - h
     local str = "[i]   open rucksack"
@@ -1182,7 +1252,29 @@ function state_one.draw_sidebar()
     elseif character then
         abstraction.print(character, px + 4*w, py)
     end
+    ]]
 
+end
+
+function state_one.draw_sidebar_objects()
+    local px = SIDEBAR_X + 12
+
+    for i, object in ipairs(_state.hero.objects) do
+        local py = 200 + 24 * (i - 1)
+        local str = string.format(
+            "[%s]   %s",
+            LETTERS[i],
+            game.data(object).name
+        )
+        abstraction.print(str, px, py)
+        local sprite = game.data(object).sprite
+        abstraction.draw(
+            sprites[sprite.file].sheet,
+            sprites[sprite.file][sprite.x][sprite.y],
+            px + 4 * 12,
+            py
+        )
+    end
 end
 
 -- print highlighted text

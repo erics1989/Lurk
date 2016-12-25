@@ -109,11 +109,10 @@ function Path.dijk(srcs, dst_f, valid_f, dist_f, stop)
 end
 
 -- A*
-function Path.astar(src, dst, valid_f, dist_f, stop, heuristic)
+function Path.astar(srcs, dst, valid_f, dist_f, stop)
     valid_f = valid_f or valid_f0
     dist_f = dist_f or d_dist_f
     stop = stop or math.huge
-    heuristic = heuristic or astar_heuristic
     local dist = {}
     local dist_heuristic = {}
     local prev = {}
@@ -130,9 +129,11 @@ function Path.astar(src, dst, valid_f, dist_f, stop, heuristic)
             qset[space] = true
         end
     end
-    if valid_f(src) then
-        dist[src] = 0
-        dist_heuristic[src] = heuristic(src, dst)
+    for _, src in ipairs(srcs) do
+        if valid_f(src) then
+            dist[src] = 0
+            dist_heuristic[src] = astar_heuristic(src, dst)
+        end
     end
     while next(q) do
         List.heap(q, cf)

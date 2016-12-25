@@ -3,6 +3,7 @@ binser = require("lib/binser")
 pp = require("lib/inspect")
 
 require("glue")
+require("abstraction")
 List = require("List")
 Path = require("Path")
 
@@ -26,10 +27,12 @@ require("state_aim")
 require("state_death")
 require("state_victory")
 
-FONT_HEADER = { file = "resource/font/Eczar-Regular.ttf", size = 200 }
+FONT_HEADER = { file = "resource/font/Cutive-Mono-Regular.otf", size = 200 }
 FONT_MONOSPACE = { file = "resource/font/ApercuMono.otf", size = 20 }
+--FONT_MONOSPACE = { file = "resource/font/Cutive-Mono-Regular.otf", size = 20 }
+--FONT_MONOSPACE = { file = "resource/font/monofur.otf", size = 23 }
 --FONT_MONOSPACE = { file = "resource/font/6x12.bdf", size = 12 }
---FONT_MONOSPACE = { file = "resource/font/Inconsolata.otf", size = 23 }
+--FONT_MONOSPACE = { file = "resource/font/Inconsolata.otf", size = 18 }
 BOARD_SIZE = 9
 SPRITES = {
     "resource/sprite/Avatar.png",
@@ -126,17 +129,5 @@ function love.draw()
     end
 end
 
-abstraction = {}
 
-function abstraction.print(str, x, y)
-    love.graphics.print(str, x, y)
-end
-
-function abstraction.font_w(font, str)
-    return font:getWidth(str or "a")
-end
-
-function abstraction.font_h(font)
-    return font:getHeight()
-end
 

@@ -17,7 +17,7 @@ function game.init()
     _state.past_notes = {}
     _state.turn = 0
     _state.postpone = {}
-    _state.animations = {}
+    _state.records = {}
 
     game.print("(press [?] for controls, hints)")
     
@@ -599,9 +599,7 @@ function game.person_attack(person, space)
     assert(verb)
     assert(verb.range(person, decoration, space))
     verb.execute(person, decoration, space)
-    local animation = game.data_init("animation_attack")
-    animation.space = space
-    table.insert(_state.animations, animation)
+    table.insert(_state.records, { name = "attack", space = space })
     return true
 end
 

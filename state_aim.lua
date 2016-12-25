@@ -102,12 +102,13 @@ function state_aim.execute(space)
     local verb, object = state_aim.verb, state_aim.object
     state_aim.deinit()
     table.remove(states)
+    state_one.preact()
     verb.execute(_state.hero, object, space)
     state_one.postact()
 end
 
 function state_aim.update(t)
-    state_one.animate(t)
+    state_one.update(t)
 end
 
 function state_aim.draw()
@@ -131,7 +132,9 @@ function state_aim.draw()
         local circle = space == state_aim.cursor
         return bcolor, color, character, circle
     end
-    state_one.draw_map(f)
+    state_one.draw_map()
+    state_one.draw_persons()
+    state_one.draw_animations()
     state_one.draw_sidebar()
 end
 
