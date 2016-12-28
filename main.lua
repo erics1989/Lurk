@@ -11,7 +11,7 @@ Hex = require("Hex")
 grammar = require("Grammar")
 require("color_constants")
 require("game")
-require("generate")
+
 generate_map = require("generate_map")
 require("branch")
 require("encounter")
@@ -27,7 +27,7 @@ require("state_aim")
 require("state_death")
 require("state_victory")
 
-FONT_HEADER = { file = "resource/font/Cutive-Mono-Regular.otf", size = 200 }
+FONT_HEADER = { file = "resource/font/ApercuMono.otf", size = 200 }
 FONT_MONOSPACE = { file = "resource/font/ApercuMono.otf", size = 20 }
 --FONT_MONOSPACE = { file = "resource/font/Cutive-Mono-Regular.otf", size = 20 }
 --FONT_MONOSPACE = { file = "resource/font/monofur.otf", size = 23 }

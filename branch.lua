@@ -278,7 +278,7 @@ _database.branch_zero = {
     [1] = {
         encounter_count = 4,
         encounters = {
-            --"encounter_person_ooze",
+            "encounter_person_ooze",
             "encounter_person_kobold_warrior",
             "encounter_person_kobold_piker",
         },
@@ -373,9 +373,6 @@ _database.branch_zero = {
             "object_staff_of_distortion",
             "object_staff_of_suggestion",
         }
-    },
-    init = function (depth)
-    end
+    }
 }
-
 

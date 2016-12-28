@@ -89,7 +89,7 @@ _database.terrain_fire = {
             local f = function (space)
                 return game.data(space.terrain).burn
             end
-            spaces = List.filter(f, Hex.adjacent(terrain.space))
+            spaces = List.filter(Hex.adjacent(terrain.space), f)
             for _, space in ipairs(spaces) do
                 game.terrain_exit(space.terrain)
                 game.terrain_enter(
@@ -107,7 +107,7 @@ _database.terrain_fire = {
                 space
             )
         else
-            table.insert(_state.map.persons, terrain)
+            table.insert(_state.map.events, terrain)
         end
     end,
     person_terrain_postact = function (person, terrain)
@@ -190,12 +190,7 @@ _database.terrain_stairs_up = {
         end
         local dst = List.filter(_state.map.spaces, f)[1]
         game.person_enter(_state.hero, dst)
-    end,
-    person_terrain_postact = function (person, terrain)
-        if person == _state.hero then
-            _state.hero.door = true
-        end
-    end,
+    end
 }
 
 _database.terrain_stairs_dn = {
@@ -213,12 +208,7 @@ _database.terrain_stairs_dn = {
         end
         local dst = List.filter(_state.map.spaces, f)[1]
         game.person_enter(_state.hero, dst)
-    end,
-    person_terrain_postact = function (person, terrain)
-        if person == _state.hero then
-            _state.hero.door = true
-        end
-    end,
+    end
 }
 
 _database.terrain_chasm = {

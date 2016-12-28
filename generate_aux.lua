@@ -25,8 +25,9 @@ function generate_aux.init(name, n, size)
     end
     _state.map.visited = {}
     _state.map.events = {}
-    _state.map.persons = {}
+    _state.map.terrains = {}
     _state.map.objects = {}
+    _state.map.persons = {}
 end
 
 function generate_aux.get_area(ax, bx, ay, by, az, bz)

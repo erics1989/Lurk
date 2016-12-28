@@ -81,7 +81,6 @@ _database.person_kobold_warrior = {
         game.person_setup(person)
         person.hp = 1
         person.perception = 9
-        person.conspic = 9
         local object = game.data_init("object_machete")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
@@ -445,9 +444,6 @@ _database.person_ooze = {
             local p1 = game.data_init("person_ooze")
             p1.size = person.size / 2
             game.person_enter(p1, space)
-            if p1.space then
-                game.person_displace(p1)
-            end
             local p2 = game.data_init("person_ooze")
             p2.size = person.size / 2
             game.person_enter(p2, space)
@@ -466,7 +462,6 @@ _database.person_kobold_archer = {
         game.person_setup(person)
         person.hp = 1
         person.perception = 9
-        person.conspic = 9
         local object = game.data_init("object_shortbow")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)

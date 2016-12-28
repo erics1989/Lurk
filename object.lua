@@ -21,14 +21,17 @@ _database.object_shortsword = {
     name = "shortsword",
     color = color_constants.base3,
     sprite = { file = "resource/sprite/Items.png", x = 0, y = 0 },
+}
+
+
+
+
+_database.object_shortsword = {
+    name = "shortsword",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 0, y = 0 },
     character = ")",
-    description =
-        "A 2\' shortsword. Range: 1.\n" ..
-        "• Lunge (when there's one space between you and an enemy and you step directly\n" ..
-        "  towards him/her, you get a free attack)\n" ..
-        "• Strafe (when you step between spaces adjacent to an enemy, you get a free\n" ..
-        "  attack)"
-    ,
+    description = "a 2' shortsword.",
     part = "hand",
     pickup = true,
     slash = true, stab = true,

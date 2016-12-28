@@ -133,8 +133,6 @@ function state_aim.draw()
         return bcolor, color, character, circle
     end
     state_one.draw_map()
-    state_one.draw_persons()
-    state_one.draw_animations()
     state_one.draw_sidebar()
 end
 

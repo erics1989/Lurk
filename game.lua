@@ -26,7 +26,11 @@ function game.init()
 
     -- enter branch zero
     local f = function ()
-        game.person_enter(_state.hero, game.get_space(0, 0))
+        local g = function (space)
+            return space.terrain.id == "terrain_stairs_up"
+        end
+        local dst = List.filter(_state.map.spaces, g)[1]
+        game.person_enter(_state.hero, dst)
     end
     game.map_enter("dungeon", 1, f)
 
@@ -84,13 +88,16 @@ function game.map_enter(name, n, enter_f)
         game.map_restore(name, n)
     else
         generate_map(_state.map, name, n)
+        _state.hero.damage = math.max(_state.hero.damage - 1, 0)
     end
+    
     if _state.postpone[path] then
         for _, f in ipairs(_state.postpone[path]) do
             f()
         end
         _state.postpone[path] = nil
     end
+
     enter_f() -- place the hero
     assert(_state.hero.space)
     -- preact
@@ -106,6 +113,7 @@ function game.descend(space)
         game.data(terrain).enter(terrain)
     end
     game.map_enter(terrain.door.name, terrain.door.n, f)
+    
 end
 
 -- store the map
@@ -113,6 +121,7 @@ function game.map_store()
     local path = game.map_path(_state.map.name, _state.map.n)
     _state.past_branchs[path] = true
     love.filesystem.write(path, binser.serialize(_state.map))
+    love.filesystem.write(path .. "2", pp(_state.map))
 end
 
 -- restore the map
@@ -291,6 +300,9 @@ function game.person_exit(person)
     List.delete(_state.map.persons, person)
     person.space, person.space.person = nil, nil
     person.here = nil
+    for _, opponent in ipairs(_state.map.persons) do
+        opponent.sense[person] = nil
+    end
 end
 
 -- person's turn
@@ -403,6 +415,7 @@ end
 
 -- person updates senses
 function game.person_scan(person)
+    person.sense = {}
     for _, p in ipairs(_state.map.persons) do
         game.person_person_check(person, p)
     end
@@ -1206,12 +1219,17 @@ end
 
 -- puts terrain on space
 function game.terrain_enter(terrain, space)
+    table.insert(_state.map.terrains, terrain)
+    if space.terrain then
+        game.terrain_exit(space.terrain)
+    end
     terrain.space, space.terrain = space, terrain
     game.terrain_postact(terrain)
 end
 
 -- deletes terrain
 function game.terrain_exit(terrain)
+    List.delete(_state.map.terrains, terrain)
     terrain.space, terrain.space.terrain = nil, nil
 end
 
