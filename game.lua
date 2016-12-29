@@ -3,6 +3,8 @@
 
 game = {}
 
+OBJECT_LIMIT = 26
+
 -- create a game
 function game.init()
     seed = SEED or os.time()
@@ -13,8 +15,7 @@ function game.init()
     _state.rand1 = love.math.newRandomGenerator(seed)
     _state.rand2 = love.math.newRandomGenerator(seed)
     _state.past_branchs = {}
-    _state.present_notes = {}
-    _state.past_notes = {}
+    _state.notes = {}
     _state.turn = 0
     _state.postpone = {}
     _state.records = {}
@@ -51,14 +52,8 @@ end
 
 -- push a game message
 function game.print(str)
-    table.insert(_state.present_notes, str)
+    table.insert(_state.notes, str)
     print(str)
-end
-
--- flush game messages (show in state_one)
-function game.flush()
-    _state.past_notes = List.copy(_state.present_notes)
-    _state.present_notes = {}
 end
 
 -- get a game object's parent
@@ -162,7 +157,6 @@ end
 function game.preact()
     _state.turn = _state.turn + 1
     game.person_preact(_state.hero)
-    game.flush()
 end
 
 --[[

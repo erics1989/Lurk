@@ -12,16 +12,20 @@ function state_one.init()
     state_one.sprites = true
     local px, py = Hex.pos({ x = 0, y = 0 }, HS)
     state_one.camera = { px = px - 480, py = py - 360 }
+    state_one.notes = {}
     state_one.terrains = {}
-    state_one.terrain_prev = {}
+    state_one.terrains2 = {}
+    state_one.objects = {}
+    state_one.objects2 = {}
+    
     state_one.persons = {}
     state_one.person_prev = {}
-    state_one.objects = {}
-    state_one.object_prev = {}
 
     state_one.fov = {}
+    state_one.fov2 = {}
     state_one.perception = {}
     state_one.check = {}
+    state_one.check2 = {}
     state_one.path = nil
     state_one.path_set = {}
     state_one.describe = nil
@@ -31,12 +35,8 @@ function state_one.init()
     state_one.records = {}
     state_one.animations = {}
 
-    state_one.prev_fov = {}
-    state_one.fov = {}
-
-
-
     state_one.process_map()
+    state_one.flush()
 end
 
 function state_one.deinit()
@@ -204,7 +204,7 @@ end
 function state_one.drop()
     if _state.hero.space.object then
         game.print("You can't drop an item here.")
-        game.flush()
+        state_one.flush()
         return
     end
     local data = {}
@@ -220,7 +220,8 @@ function state_one.drop()
         option.str = state_one.get_object_str(object)
         option.execute = function ()
             game.person_object_drop(_state.hero, object)
-            game.flush()
+            state_one.process_map()
+            state_one.flush()
         end
         table.insert(data.options, option)
     end
@@ -296,7 +297,7 @@ function state_one.check_object(object)
     option.str = "drop"
     option.execute = function ()
         game.person_object_drop(_state.hero, object)
-        game.flush()
+        state_one.flush()
     end
     table.insert(data.options, option)
     state_menu.init(data)
@@ -470,7 +471,7 @@ function state_one.step(dx, dy)
                         state_one.postact()
                     else
                         game.print("You can't attack.")
-                        game.flush()
+                        state_one.flush()
                     end
                 else
                     if game.person_can_step(_state.hero) then 
@@ -479,7 +480,7 @@ function state_one.step(dx, dy)
                         state_one.postact()
                     else
                         game.print("You can't step.")
-                        game.flush()
+                        state_one.flush()
                     end
                 end
             else
@@ -489,7 +490,7 @@ function state_one.step(dx, dy)
                     state_one.postact()
                 else
                     game.print("You can't step.")
-                    game.flush()
+                    state_one.flush()
                 end
             end
         end
@@ -511,29 +512,31 @@ function state_one.pickup()
     if object and game.data(object).pickup then
         game.person_object_pickup(_state.hero, object)
     end
-    game.flush()
+    state_one.process_map()
+    state_one.flush()
 end
 
 function state_one.preact()
-    state_one.store_state()
-    state_one.store_fov()
+    state_one.store()
 end
 
+function state_one.store()
+    state_one.store_fov()
+    state_one.store_terrains()
+    state_one.store_objects()
+    state_one.store_state()
+end
+
+function state_one.store_terrains()
+    state_one.terrains2 = state_one.terrains
+end
+
+function state_one.store_objects()
+    state_one.objects2 = state_one.objects
+end
+
+
 function state_one.store_state()
-    state_one.terrains = {}
-    state_one.terrain_prev = {}
-    for _, terrain in ipairs(_state.map.terrains) do
-        table.insert(state_one.terrains, terrain)
-        state_one.terrain_prev[terrain] = terrain.space
-    end
-    state_one.objects = {}
-    state_one.object_prev = {}
-    for _, object in ipairs(_state.map.objects) do
-        if state_one.sense[object] then
-            table.insert(state_one.objects, object)
-            state_one.object_prev[object] = object.space
-        end
-    end
     state_one.persons = {}
     state_one.person_prev = {}
     for _, person in ipairs(_state.map.persons) do
@@ -545,7 +548,8 @@ function state_one.store_state()
 end
 
 function state_one.store_fov()
-    state_one.prev_fov = state_one.fov
+    state_one.fov2 = state_one.fov
+    state_one.check2 = state_one.check
 end
 
 function state_one.descend()
@@ -557,44 +561,64 @@ function state_one.descend()
                 table.insert(states, state_victory)
             else
                 game.print("You can't ascend.")
-                game.flush()
+                state_one.flush()
             end
         else
-            state_one.preact()
+            state_one.store()
             game.descend(space)
+            state_one.process_map()
             state_one.timer = 0
             state_one.animate = 0
-            state_one.process_map()
-
-        end
+            end
     end
 end
 
 -- end the turn
-function state_one.postact()
-    local object = _state.hero.space.object
-    if  object and
-        game.data(object).pickup and
-        not object.dropped and
-        #_state.hero.objects <= 26
-    then
-        game.person_object_pickup(_state.hero, object)
+function state_one.postact()    
+    game.rotate()
+    
+    state_one.process_map()
+
+    if _state.hero.dead then
+        state_one.die()
+    else
+        state_one.auto_pickup()
     end
     
-    game.rotate()
-
-    state_one.process_map()
-    if _state.hero.dead then
-        game.person_exit(_state.hero)
-        state_death.init()
-        table.insert(states, state_death)
-    end
+    state_one.flush()
 
     state_one.records = List.copy(_state.records)
     _state.records = {}
+
     state_one.animations = {}
     state_one.push_animations()
+    
     state_one.animate = 0
+end
+
+function state_one.flush()
+    state_one.notes = List.copy(_state.notes)
+    _state.notes = {}
+end
+
+function state_one.auto_pickup()
+    local object = _state.hero.space.object
+    if object then
+        local proto = game.data(object)
+        if  proto.pickup and
+            not object.dropped and
+            #_state.hero.objects <= OBJECT_LIMIT
+        then
+            game.person_object_pickup(_state.hero, object)
+            state_one.process_map()
+        end
+    end
+end
+
+function state_one.die()
+    game.person_exit(_state.hero)
+    state_death.init()
+    table.insert(states, state_death)
 end
 
 function state_one.push_animations()
@@ -611,6 +635,8 @@ end
 -- process the map
 function state_one.process_map()
     state_one.process_fov()
+    state_one.process_terrains()
+    state_one.process_objects()
     state_one.opponents = game.person_get_opponents(_state.hero)
     state_one.process_con_map()
     state_one.process_check_map()
@@ -638,6 +664,24 @@ function state_one.process_fov()
                     state_one.sense[space.object] = true
                 end
             end
+        end
+    end
+end
+
+function state_one.process_terrains()
+    state_one.terrains = {}
+    for _, terrain in ipairs(_state.map.terrains) do
+        if _state.map.visited[terrain.space] then
+            state_one.terrains[terrain.space] = terrain
+        end
+    end
+end
+
+function state_one.process_objects()
+    state_one.objects = {}
+    for _, object in ipairs(_state.map.objects) do
+        if state_one.sense[object] then
+            state_one.objects[object.space] = object
         end
     end
 end
@@ -676,7 +720,6 @@ function state_one.process_check_map()
     local f = function (space)
         return
             game.space_stand(space) and
-            not space.terrain.door and
             _state.map.visited[space]
     end
     local spaces = List.filter(_state.map.spaces, f)
@@ -748,202 +791,194 @@ end
 
 function state_one.draw_map(highlight)
     state_one.draw_terrains()
+    state_one.draw_fov()
+    state_one.draw_check()
     state_one.draw_objects()
     state_one.draw_persons()
     state_one.draw_animations()
 end
 
--- draw the map
-function state_one.draw_terrain()
-    for _, space in ipairs(_state.map.spaces) do
-        local proto = game.data(space.terrain)
-        local c1 = List.copy(proto.bcolor)
-        local c2 = List.copy(proto.color)
-        local s = proto.sprite
-        
-        if state_one.animate < 1 then
-            local fov1 = state_one.prev_fov[space]
-            local fov2 = state_one.fov[space]
-            if fov1 and fov2 then
-                -- pass
-            elseif fov1 then
-                c1[4] = glue.lerp(255, 50, state_one.animate)
-                c2[4] = glue.lerp(255, 50, state_one.animate)
-            elseif fov2 then
-                c1[4] = glue.lerp(50, 255, state_one.animate)
-                c2[4] = glue.lerp(50, 255, state_one.animate)
+-- draw terrains
+function state_one.draw_terrains()
+    if state_one.animate < 1 then
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.terrains[space]
+            local prev = state_one.terrains2[space]
+            if curr and curr == prev then
+                local proto = game.data(curr)
+                local bc = proto.bcolor
+                local c = proto.color
+                local s = proto.sprite
+                abstraction.set_color(bc)
+                state_one.draw_hex(px, py)
+                abstraction.set_color(c)
+                abstraction.draw_sprite(s, px - 8, py - 12)
             else
-                c1[4] = 50
-                c2[4] = 50
-            end
-        else
-            if state_one.fov[space] then
-                -- pass
-            else
-                c1[4] = 50
-                c2[4] = 50
+                if curr then
+                    local proto = game.data(curr)
+                    local bc = List.copy(proto.bcolor)
+                    local c = List.copy(proto.color)
+                    local s = proto.sprite
+                    bc[4] = glue.lerp(0, 255, state_one.animate)
+                    c[4] = glue.lerp(0, 255, state_one.animate)
+                    abstraction.set_color(bc)
+                    state_one.draw_hex(px, py)
+                    abstraction.set_color(c)
+                    abstraction.draw_sprite(s, px - 8, py - 12)
+                end
+                if prev then
+                    print("hello")
+                    local proto = game.data(prev)
+                    local bc = List.copy(proto.bcolor)
+                    local c = List.copy(proto.color)
+                    local s = proto.sprite
+                    bc[4] = glue.lerp(255, 0, state_one.animate)
+                    c[4] = glue.lerp(255, 0, state_one.animate)
+                    abstraction.set_color(bc)
+                    state_one.draw_hex(px, py)
+                    abstraction.set_color(c)
+                    abstraction.draw_sprite(s, px - 8, py - 12)
+                end
             end
         end
-        
-        local px, py = Hex.pos(space, HS)
-        px = px - state_one.camera.px
-        py = py - state_one.camera.py
-
-        abstraction.set_color(c1)
-        state_one.draw_hex(px, py)
-        
-        abstraction.set_color(c2)
-        abstraction.draw(
-            sprites[s.file].sheet,
-            sprites[s.file][s.x][s.y],
-            px - 8, py - 12
-        )
+    else
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.terrains[space]
+            if curr then
+                local proto = game.data(curr)
+                local bc = proto.bcolor
+                local c = proto.color
+                local s = proto.sprite
+                abstraction.set_color(bc)
+                state_one.draw_hex(px, py)
+                abstraction.set_color(c)
+                abstraction.draw_sprite(s, px - 8, py - 12)
+            end
+        end
     end
 end
 
-function state_one.draw_terrains()
+function state_one.draw_fov()
     if state_one.animate < 1 then
-        for _, terrain in ipairs(_state.map.terrains) do
-            local proto = game.data(terrain)
-            local s = proto.sprite
-            local prev = state_one.terrain_prev[terrain]
-            if prev then
-                local px, py = state_one.get_px(terrain.space)
-                local bc = List.copy(proto.bcolor)
-                local c = List.copy(proto.color)
-
-                local fov1 = state_one.prev_fov[terrain.space]
-                local fov2 = state_one.fov[terrain.space]
-                if fov1 and fov2 then
-                    -- pass
-                elseif fov1 then
-                    bc[4] = glue.lerp(255, 50, state_one.animate)
-                    c[4] = glue.lerp(255, 50, state_one.animate)
-                elseif fov2 then
-                    bc[4] = glue.lerp(50, 255, state_one.animate)
-                    c[4] = glue.lerp(50, 255, state_one.animate)
-                else
-                    bc[4] = 50
-                    c[4] = 50
-                end
-
-                abstraction.set_color(bc)
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = not state_one.fov[space]
+            local prev = not state_one.fov2[space]
+            if curr and prev then
+                abstraction.set_color(color_constants.fov)
                 state_one.draw_hex(px, py)
-                abstraction.set_color(c)
-                abstraction.draw(
-                    sprites[s.file].sheet,
-                    sprites[s.file][s.x][s.y],
-                    px - 8, py - 12
-                )
             else
-                
-                local bc = List.copy(proto.bcolor)
-                local c = List.copy(proto.color)
-                
-                local fov1 = state_one.prev_fov[terrain.space]
-                local fov2 = state_one.fov[terrain.space]
-                if fov1 and fov2 then
-                    -- pass
-                elseif fov1 then
-                    bc[4] = glue.lerp(255, 50, state_one.animate)
-                    c[4] = glue.lerp(255, 50, state_one.animate)
-                elseif fov2 then
-                    bc[4] = glue.lerp(50, 255, state_one.animate)
-                    c[4] = glue.lerp(50, 255, state_one.animate)
-                else
-                    bc[4] = 50
-                    c[4] = 50
+                if curr then
+                    local c = List.copy(color_constants.fov)
+                    c[4] = glue.lerp(0, 127, state_one.animate)
+                    abstraction.set_color(c)
+                    state_one.draw_hex(px, py)
                 end
-
-                bc[4] = (bc[4] or 255) * glue.lerp(0, 1, state_one.animate)
-                c[4] = (c[4] or 255) * glue.lerp(0, 1, state_one.animate)
-
-                local px, py = state_one.get_px(terrain.space)
-                abstraction.set_color(bc)
-                state_one.draw_hex(px, py)
-                abstraction.set_color(c)
-                abstraction.draw(
-                    sprites[s.file].sheet,
-                    sprites[s.file][s.x][s.y],
-                    px - 8, py - 12
-                )
-                
+                if prev then
+                    local c = List.copy(color_constants.fov)
+                    c[4] = glue.lerp(127, 0, state_one.animate)
+                    abstraction.set_color(c)
+                    state_one.draw_hex(px, py)
+                end
             end
         end
-        
-        local set = List.set(_state.map.terrains)
-        local terrains = List.filter(
-            state_one.terrains,
-            function (terrain)
-                return not set[terrain]
-            end
-        )
-        for _, terrain in ipairs(terrains) do
-            local proto = game.data(terrain)
-            local bc = List.copy(proto.bcolor)
-            local c = List.copy(proto.color)
-            local s = proto.sprite
-            local prev = state_one.terrain_prev[terrain]
-
-            local fov1 = state_one.prev_fov[terrain.space]
-            local fov2 = state_one.fov[terrain.space]
-            if fov1 and fov2 then
-                -- pass
-            elseif fov1 then
-                bc[4] = glue.lerp(255, 50, state_one.animate)
-                c[4] = glue.lerp(255, 50, state_one.animate)
-            elseif fov2 then
-                bc[4] = glue.lerp(50, 255, state_one.animate)
-                c[4] = glue.lerp(50, 255, state_one.animate)
-            else
-                bc[4] = 50
-                c[4] = 50
-            end
-
-            bc[4] = (bc[4] or 255) * glue.lerp(1, 0, state_one.animate)
-            c[4] = (c[4] or 255) * glue.lerp(1, 0, state_one.animate)
-
-            -- bc[4] = glue.lerp(255, 0, state_one.animate)
-            -- c[4] = glue.lerp(255, 0, state_one.animate)
-            local px, py = state_one.get_px(prev)
-            abstraction.set_color(bc)
-            state_one.draw_hex(px, py)
-            abstraction.set_color(c)
-            abstraction.draw(
-                sprites[s.file].sheet,
-                sprites[s.file][s.x][s.y],
-                px - 8, py - 12
-            )
-        end
-        
     else
-        for _, terrain in ipairs(_state.map.terrains) do
-            local proto = game.data(terrain)
-            local s = proto.sprite
-            local px, py = state_one.get_px(terrain.space)
-            local bc = List.copy(proto.bcolor)
-            local c = List.copy(proto.color)
-            
-            if state_one.fov[terrain.space] then
-                -- pass
-            else
-                bc[4] = 50
-                c[4] = 50
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = not state_one.fov[space]
+            if curr then
+                abstraction.set_color(color_constants.fov)
+                state_one.draw_hex(px, py)
             end
+        end
+    end
+end
 
-            abstraction.set_color(bc)
-            state_one.draw_hex(px, py)
-            abstraction.set_color(c)
-            abstraction.draw(
-                sprites[s.file].sheet,
-                sprites[s.file][s.x][s.y],
-                px - 8, py - 12
-            )
+function state_one.draw_check()
+    if state_one.animate < 1 then
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.check[space]
+            local prev = state_one.check2[space]
+            if curr and prev then
+                abstraction.set_color(color_constants.check)
+                state_one.draw_hex(px, py)
+            else
+                if curr then
+                    local c = List.copy(color_constants.check)
+                    c[4] = glue.lerp(0, 127, state_one.animate)
+                    abstraction.set_color(c)
+                    state_one.draw_hex(px, py)
+                end
+                if prev then
+                    local c = List.copy(color_constants.check)
+                    c[4] = glue.lerp(127, 0, state_one.animate)
+                    abstraction.set_color(c)
+                    state_one.draw_hex(px, py)
+                end
+            end
+        end
+    else
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.check[space]
+            if curr then
+                abstraction.set_color(color_constants.check)
+                state_one.draw_hex(px, py)
+            end
         end
     end
 end
 
 function state_one.draw_objects()
+    if state_one.animate < 1 then
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.objects[space]
+            local prev = state_one.objects2[space]
+            if curr and curr == prev then
+                local proto = game.data(curr)
+                local c = proto.color
+                local s = proto.sprite
+                abstraction.set_color(c)
+                abstraction.draw_sprite(s, px - 8, py - 12)
+            else
+                if curr then
+                    local proto = game.data(curr)
+                    local c = List.copy(proto.color)
+                    local s = proto.sprite
+                    c[4] = glue.lerp(0, 255, state_one.animate)
+                    abstraction.set_color(c)
+                    abstraction.draw_sprite(s, px - 8, py - 12)
+                end
+                if prev then
+                    local proto = game.data(prev)
+                    local c = List.copy(proto.color)
+                    local s = proto.sprite
+                    c[4] = glue.lerp(255, 0, state_one.animate)
+                    abstraction.set_color(c)
+                    abstraction.draw_sprite(s, px - 8, py - 12)
+                end
+            end
+        end
+    else
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.objects[space]
+            if curr then
+                local proto = game.data(curr)
+                local c = proto.color
+                local s = proto.sprite
+                abstraction.set_color(c)
+                abstraction.draw_sprite(s, px - 8, py - 12)
+            end
+        end
+    end
+end
+
+function state_one.draw_objectsasdf()
     if state_one.animate < 1 then
         local objects = List.filter(
             _state.map.objects,
@@ -1330,8 +1365,8 @@ end
 -- draw the game messages
 function state_one.draw_notes()
     love.graphics.setFont(fonts.monospace)
-    if _state.past_notes[1] then
-        local concat = table.concat(_state.past_notes, " ")
+    if next(state_one.notes) then
+        local concat = table.concat(state_one.notes, " ")
         local _, strs = fonts.monospace:getWrap(concat, 960 - 24)
         for i, str in ipairs(strs) do
             local px = 12

@@ -20,3 +20,11 @@ function abstraction.set_color(a, b, c)
     love.graphics.setColor(a, b, c)
 end
 
+function abstraction.draw_sprite(data, x, y)
+    abstraction.draw(
+        sprites[data.file].sheet,
+        sprites[data.file][data.x][data.y],
+        x, y
+    )
+end
+

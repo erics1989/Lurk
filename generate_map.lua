@@ -36,7 +36,27 @@ local function generate_map_cave(prev, name, n)
         end
     end
 
+    local area = generate_aux.get_blobs(
+        function (space) return game.rand1(100) <= 50 end,
+        1
+    )
+    for _, space in ipairs(area) do
+        if space.terrain.id == "terrain_foliage" then
+            local terrain = game.data_init("terrain_dense_foliage")
+            game.terrain_enter(terrain, space)
+        end
+    end
 
+    local area = generate_aux.get_blobs(
+        function (space) return game.rand1(100) <= 50 end,
+        1
+    )
+    for _, space in ipairs(area) do
+        if space.terrain.id == "terrain_foliage" then
+            local terrain = game.data_init("terrain_tree")
+            game.terrain_enter(terrain, space)
+        end
+    end
 
     -- post-processing
     local vf = function (space)
@@ -77,7 +97,7 @@ local function generate_map_cave(prev, name, n)
     end
 
     -- place dnstairs
-    if depth == 4 then
+    if _state.map.n == 4 then
         local object = game.data_init("object_orb")
         game.object_enter(object, dnstairs)
     else

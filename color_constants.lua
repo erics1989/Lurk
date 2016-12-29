@@ -22,4 +22,6 @@ color_constants.cyan = { 42, 161, 152 }
 color_constants.green =  { 133, 153, 0 }
 
 color_constants.highlight = { 0, 0, 0, 127 }
+color_constants.check = { 220, 50, 47, 127 }
+color_constants.fov = { 0, 0, 0, 127 }
 

@@ -177,7 +177,7 @@ _database.status_cover_foliage = {
         object.status_cover_foliage = status
     end,
     con = function (person, attacker, status)
-        return 3
+        return 4
     end,
     person_postact = function (person, status)
         if person.space.terrain.id ~= "terrain_dense_foliage" then
