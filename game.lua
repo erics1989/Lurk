@@ -635,6 +635,9 @@ end
 
 -- person gets damaged
 function game.person_damage(person, points)
+    if person == _state.hero then
+        table.insert(_state.records, { name = "damage" })
+    end
     person.damage = math.max(person.damage + points, 0)
     if person.damage >= person.hp then
         game.person_die(person)

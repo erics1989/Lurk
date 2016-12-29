@@ -567,9 +567,10 @@ function state_one.descend()
             state_one.store()
             game.descend(space)
             state_one.process_map()
+            state_one.flush()
             state_one.timer = 0
             state_one.animate = 0
-            end
+        end
     end
 end
 
@@ -622,10 +623,14 @@ function state_one.die()
 end
 
 function state_one.push_animations()
+    local damage = false
     for _, record in ipairs(state_one.records) do
         if record.name == "attack" then
             local animation = game.data_init("animation_attack")
             animation.space = record.space
+            table.insert(state_one.animations, animation)
+        elseif record.name == "damage" then
+            local animation = game.data_init("animation_damage")
             table.insert(state_one.animations, animation)
         end
     end
@@ -1133,21 +1138,7 @@ function state_one.draw_animations()
     if state_one.animate < 1 then
         for _, animation in ipairs(state_one.animations) do
             local proto = game.data(animation)
-            local len = #proto.sprites
-            local i = math.ceil(state_one.animate * len)
-            local sprite = proto.sprites[i]
-            local space = animation.space
-            
-            local px, py = Hex.pos(space, HS)
-            px = px - state_one.camera.px
-            py = py - state_one.camera.py
-            
-            love.graphics.setColor(color_constants.base3)
-            love.graphics.draw(
-                sprites[sprite.file].sheet,
-                sprites[sprite.file][sprite.x][sprite.y],
-                px - 8, py - 12
-            )
+            proto.draw(animation)
         end
     end
 end

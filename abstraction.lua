@@ -16,6 +16,10 @@ function abstraction.draw(a, b, c, d)
     love.graphics.draw(a, b, c, d)
 end
 
+function abstraction.rect(a, b, c, d, e)
+    love.graphics.rectangle(a, b, c, d, e)
+end
+
 function abstraction.set_color(a, b, c)
     love.graphics.setColor(a, b, c)
 end

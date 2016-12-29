@@ -43,10 +43,6 @@ _database.hero = {
     act = function (person)
         
     end,
-    person_die = function (person)
-        local object = game.data_init("object_blood")
-        game.object_enter(object, person.space)
-    end,
     attack = {
         range = function (person, object, space)
             return Hex.dist(person.space, space) == 1
