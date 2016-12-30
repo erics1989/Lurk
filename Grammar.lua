@@ -14,6 +14,7 @@ end
 function grammar.the(str)
     return
         str == "you" and str or
+        str == "someone" and str or
         string.format("the %s", str)
 end
 

@@ -3,18 +3,15 @@
 
 _database = _database or {}
 
-_database.object_shortsword = {
-    name = "shortsword",
+_database.object_sword = {
+    name = "sword",
     color = color_constants.base3,
     sprite = { file = "resource/sprite/Items.png", x = 0, y = 0 },
     character = ")",
-    description = "a 2' shortsword.",
-    part = "hand",
-    pickup = true,
-    slash = true, stab = true,
+    description = "a sword.",
+    pickup = true, part = "hand", slash = true, stab = true,
     init = function (object)
         game.object_setup(object)
-        object.enchant = 2
     end,
     person_poststep = function (person, object, src)
         if  game.person_object_equipped(person, object) and
@@ -31,16 +28,12 @@ _database.object_shortsword = {
         execute = function (person, object, space)
             local opponent = space.person
             if opponent then
-                if game.person_sense(_state.hero, person) then
-                    local str = string.format(
-                        game.data(person).plural and
-                            "%s stab %s." or
-                            "%s stabs %s.",
-                        grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(opponent).name)
-                    )
-                    game.print(str)
-                end
+                game.print_verb2(
+                    person,
+                    opponent,
+                    "%s slashes %s.",
+                    "%s slash %s."
+                )
                 game.person_damage(opponent, 1)
             end
         end
@@ -57,6 +50,207 @@ _database.object_shortsword = {
             end
         end
     },
+}
+
+_database.object_axe = {
+    name = "axe",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    character = ")",
+    description = "an axe.",
+    pickup = true, part = "hand", slash = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    person_poststep = function (person, object, src)
+        if  game.person_object_equipped(person, object) and
+            game.person_can_attack(person)
+        then
+            game.person_poststep_attack2(person, src)
+        end
+    end,
+    attack = {
+        range = function (person, object, space)
+            return Hex.dist(person.space, space) == 1
+        end,
+        execute = function (person, object, space)
+            local spaces = Hex.adjacent(person.space)
+            for _, space in ipairs(spaces) do
+                local opponent = space.person
+                if  opponent and
+                    opponent.faction ~= person.faction
+                then
+                    game.print_verb2(
+                        person,
+                        opponent,
+                        "%s hacks %s.",
+                        "%s hack %s."
+                    )
+                    game.person_damage(opponent, 1)
+                end
+            end
+        end
+    },
+    equip = {
+        valid = function (person, object, space)
+            return not game.person_object_equipped(person, object)
+        end,
+        execute = function (person, object, space)
+            if game.person_object_equipped(person, object) then
+                game.person_object_unequip(person, object)
+            else
+                game.person_object_equip(person, object)
+            end
+        end
+    },
+}
+
+_database.object_spear = {
+    name = "spear",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    character = ")",
+    description = "a spear.",
+    pickup = true, part = "hand", stab = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    person_poststep = function (person, object, src)
+        if  game.person_object_equipped(person, object) and
+            game.person_can_attack(person)
+        then
+            game.person_poststep_attack3(person, src)
+        end
+    end,
+    attack = {
+        range = function (person, object, space)
+            return Hex.dist(person.space, space) == 1
+        end,
+        execute = function (person, object, space)
+            local spaces = {}
+            table.insert(spaces, space)
+            local dx = space.x - person.space.x
+            local dy = space.y - person.space.y
+            local space2 = game.get_space(
+                space.x + dx,
+                space.y + dy
+            )
+            print(space2.x, space2.y)
+            table.insert(spaces, space2)
+            for _, space in ipairs(spaces) do
+                local opponent = space.person
+                if  opponent and
+                    opponent.faction ~= person.faction
+                then
+                    game.print_verb2(
+                        person,
+                        opponent,
+                        "%s skewers %s.",
+                        "%s skewer %s."
+                    )
+                    game.person_damage(opponent, 1)
+                end
+            end
+        end
+    },
+    equip = {
+        valid = function (person, object, space)
+            return not game.person_object_equipped(person, object)
+        end,
+        execute = function (person, object, space)
+            if game.person_object_equipped(person, object) then
+                game.person_object_unequip(person, object)
+            else
+                game.person_object_equip(person, object)
+            end
+        end
+    },
+}
+
+_database.object_hammer = {
+    name = "hammer",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    character = ")",
+    description = "a hammer.",
+    pickup = true, part = "hand",
+    init = function (object)
+        game.object_setup(object)
+    end,
+    attack = {
+        range = function (person, object, space)
+            return Hex.dist(person.space, space) == 1
+        end,
+        execute = function (person, object, space)
+            local opponent = space.person
+            if  opponent then
+                game.print_verb2(
+                    person,
+                    opponent,
+                    "%s smashes %s.",
+                    "%s smash %s."
+                )
+                game.person_damage(opponent, 2)
+            end
+        end
+    },
+    equip = {
+        valid = function (person, object, space)
+            return not game.person_object_equipped(person, object)
+        end,
+        execute = function (person, object, space)
+            if game.person_object_equipped(person, object) then
+                game.person_object_unequip(person, object)
+            else
+                game.person_object_equip(person, object)
+            end
+        end
+    },
+}
+
+_database.object_bow_and_arrows = {
+    name = "bow and arrows",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    character = ")",
+    description = "a bow and arrows.",
+    pickup = true, part = "hand",
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) <= 4 and
+                Hex.axis(person.space, space) and
+                not game.obstructed(
+                    person.space,
+                    space,
+                    game.space_vacant
+                )
+        end,
+        execute = function (person, object, space)
+            local opponent = space.person
+            if opponent then
+                game.print_verb2(
+                    person,
+                    opponent,
+                    "%s shoots an arrow at %s.",
+                    "%s shoot an arrow at %s."
+                )
+                game.person_damage(opponent, 1)
+            else
+                game.print_verb1(
+                    person,
+                    "%s shoots an arrow.",
+                    "%s shoot an arrow."
+                )
+            end
+        end
+    }
 }
 
 _database.object_feather = {
@@ -151,7 +345,7 @@ _database.object_bear_totem = {
     color = color_constants.base3,
     sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
     character = "/",
-    description = "a bear totem. [use] use it to summon a bear.",
+    description = "a bear totem. [use] it to summon a bear.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
@@ -180,6 +374,75 @@ _database.object_bear_totem = {
             game.person_add_friend(person, person2)
         end
     }
+}
+
+_database.object_fire_staff = {
+    name = "fire staff",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a fire staff. [use] it to shoot a fireball.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) <= 4 and
+                Hex.axis(person.space, space) and
+                not game.obstructed(
+                    person.space,
+                    space,
+                    game.space_vacant
+                )
+        end,
+        execute = function (person, object, space)
+            local opponent = space.person
+            if opponent then
+                game.print_verb2(
+                    person,
+                    opponent,
+                    "%s shoots a fireball at %s.",
+                    "%s shoot a fireball at %s.",
+                    "%s shoots a fireball at someone.",
+                    "%s shoot a fireball at someone.",
+                    "%s is shot by a fireball.",
+                    "%s are shot by a fireball."
+                )
+                game.person_damage(opponent, 1)
+            else
+                game.print_verb1(
+                    person,
+                    "%s shoots a fireball.",
+                    "%s shoot a fireball."
+                )
+            end
+            if game.data(space.terrain).burn then
+                game.terrain_exit(space.terrain)
+                local terrain = game.data_init("terrain_fire")
+                game.terrain_enter(terrain, space)
+            end
+        end
+    }
+}
+
+_database.object_regeneration_charm = {
+    name = "regeneration charm",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a regeneration charm. regenerate 1 extra heart per floor.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    person_postdescend = function (person, object)
+        game.person_undamage(person, 1)
+    end
 }
 
 _database.object_orb = {
@@ -245,7 +508,7 @@ _database.object_machete = {
     end
 }
 
-_database.object_spear = {
+_database.object_spearasdf = {
     name = "spear",
     color = { 255, 255, 255 }, character = ")",
     part = "hand", pickup = true,

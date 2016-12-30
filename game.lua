@@ -83,7 +83,14 @@ function game.map_enter(name, n, enter_f)
         game.map_restore(name, n)
     else
         generate_map(_state.map, name, n)
-        _state.hero.damage = math.max(_state.hero.damage - 1, 0)
+        game.person_undamage(_state.hero, 1)
+        local decorations = game.person_decorations(_state.hero)
+        for _, decoration in ipairs(decorations) do
+            local proto = game.data(decoration)
+            if proto.person_postdescend then
+                proto.person_postdescend(_state.hero, decoration)
+            end
+        end
     end
     
     if _state.postpone[path] then
@@ -596,7 +603,9 @@ function game.person_can_attack(person)
             return false
         end
     end
-    return true
+    local decoration = person.hand or person
+    local verb = game.data(decoration).attack
+    return verb
 end
 
 -- person attacks
@@ -1289,4 +1298,41 @@ function game.object_fall(object, x, y)
     game.object_enter(object, dst)
 end
 
+function game.print_verb1(person, s1, s2)
+    local sense = game.person_sense(_state.hero, person)
+    local proto = game.data(person)
+    if sense then
+        local str = string.format(
+            proto.plural and s2 or s1,
+            grammar.cap(grammar.the(proto.name))
+        )
+        game.print(str)
+    end
+end
 
+function game.print_verb2(person1, person2, s1, s2)
+    local sense1 = game.person_sense(_state.hero, person1)
+    local sense2 = game.person_sense(_state.hero, person2)
+    if sense1 and sense2 then
+        local str = string.format(
+            game.data(person1).plural and s2 or s1,
+            grammar.cap(grammar.the(game.data(person1).name)),
+            grammar.the(game.data(person2).name)
+        )
+        game.print(str)
+    elseif sense1 then
+        local str = string.format(
+            game.data(person1).plural and s2 or s1,
+            grammar.cap(grammar.the(game.data(person1).name)),
+            "someone"
+        )
+        game.print(str)
+    elseif sense2 then
+        local str = string.format(
+            s1,
+            grammar.cap("someone"),
+            grammar.the(game.data(person2).name)
+        )
+        game.print(str)
+    end
+end

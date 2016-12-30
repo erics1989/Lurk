@@ -16,7 +16,7 @@ _database.hero = {
         person.faction = "hero"
         local status = game.data_init("status_terrestrial")
         game.person_status_enter(person, status)
-        local object = game.data_init("object_shortsword")
+        local object = game.data_init("object_bow_and_arrows")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
         local object = game.data_init("object_feather")
@@ -24,6 +24,10 @@ _database.hero = {
         local object = game.data_init("object_sprinting_shoes")
         game.person_object_enter(person, object)
         local object = game.data_init("object_bear_totem")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_fire_staff")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_regeneration_charm")
         game.person_object_enter(person, object)
     end,
     act = function (person)

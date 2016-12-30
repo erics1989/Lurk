@@ -17,10 +17,10 @@ function state_one.init()
     state_one.terrains2 = {}
     state_one.objects = {}
     state_one.objects2 = {}
-    state_one.persons = {}
-    state_one.persons2 = {}
-    state_one.persons3 = {}
-    state_one.persons4 = {}
+    state_one.persons = {}  -- space -> person
+    state_one.persons2 = {} -- space -> person (prev)
+    state_one.persons3 = {} -- person -> space
+    state_one.persons4 = {} -- person -> space (prev)
     
     state_one.fov = {}
     state_one.fov2 = {}
