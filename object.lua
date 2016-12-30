@@ -3,29 +3,6 @@
 
 _database = _database or {}
 
-_database.object_orb = {
-    name = "The Seed of Despair",
-    color = color_constants.red,
-    character = "*",
-    sprite = { file = "resource/sprite/Items.png", x = 16, y = 3 },
-    pickup = true,
-    init = function (object)
-        game.object_setup(object)
-    end,
-    person_poststep = function (person, object, src)
-        person.seed = true
-    end
-}
-
-_database.object_shortsword = {
-    name = "shortsword",
-    color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 0, y = 0 },
-}
-
-
-
-
 _database.object_shortsword = {
     name = "shortsword",
     color = color_constants.base3,
@@ -80,19 +57,143 @@ _database.object_shortsword = {
             end
         end
     },
-    throw = {
+}
+
+_database.object_feather = {
+    name = "feather",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 17, y = 12 },
+    character = "/",
+    description = "a feather. [use] it to jump to a hex.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
         valid = function (person, object)
             return true
         end,
         range = function (person, object, space)
-            return Hex.dist(person.space, space) <= 4
+            return
+                Hex.dist(person.space, space) <= 2 and
+                game.space_vacant(space)
         end,
         execute = function (person, object, space)
-            game.person_object_throw(person, object)
-            game.person_object_exit(person, object)
-            game.object_enter(object, space)
+            if game.person_sense(_state.hero, person) then
+                local str = string.format(
+                    game.data(person).plural and
+                        "%s jump." or
+                        "%s jumps.",
+                    grammar.cap(grammar.the(game.data(person).name))
+                )
+                game.print(str)
+            end
+            local src = person.space
+            game.person_relocate(person, space)
+            
+            local proto = game.data(person.hand)
+            if proto.slash then
+                game.person_poststep_attack2(person, src)
+            end
+            if proto.stab then
+                game.person_poststep_attack3(person, src)
+            end
         end
     }
+}
+
+_database.object_sprinting_shoes = {
+    name = "sprinting shoes",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a pair of sprinting shoes. [use] use it to step 4x in one direction.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) <= 4 and
+                Hex.axis(person.space, space) and
+                not game.obstructed(
+                    person.space,
+                    space,
+                    game.space_vacant
+                ) and
+                game.space_vacant(space)
+        end,
+        execute = function (person, object, space)
+            if game.person_sense(_state.hero, person) then
+                local str = string.format(
+                    game.data(person).plural and
+                        "%s dash." or
+                        "%s dashes.",
+                    grammar.cap(grammar.the(game.data(person).name))
+                )
+                game.print(str)
+            end
+            local path = Hex.line1(person.space, space)
+            for i = 2, #path do
+                game.person_step(person, path[i])
+            end
+
+        end
+    }
+}
+
+_database.object_bear_totem = {
+    name = "bear totem",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a bear totem. [use] use it to summon a bear.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) <= 1 and
+                game.space_vacant(space)
+        end,
+        execute = function (person, object, space)
+            if game.person_sense(_state.hero, person) then
+                local str = string.format(
+                    game.data(person).plural and
+                        "%s summon a bear." or
+                        "%s summons a bear.",
+                    grammar.cap(grammar.the(game.data(person).name))
+                )
+                game.print(str)
+            end
+            local person2 = game.data_init("person_bear")
+            game.person_enter(person2, space)
+            game.person_add_friend(person, person2)
+        end
+    }
+}
+
+_database.object_orb = {
+    name = "The Seed of Despair",
+    color = color_constants.red,
+    character = "*",
+    sprite = { file = "resource/sprite/Items.png", x = 16, y = 3 },
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    person_poststep = function (person, object, src)
+        person.seed = true
+    end
 }
 
 _database.object_machete = {
@@ -229,13 +330,32 @@ _database.object_shortbow = {
             ) or space
             local opponent = space.person
             if opponent then
-                if game.person_sense(_state.hero, person) then
+                local sense1 = game.person_sense(_state.hero, person)
+                local sense2 = game.person_sense(_state.hero, opponent)
+                if sense1 and sense2 then
                     local str = string.format(
                         game.data(person).plural and
                             "%s shoot an arrow at %s." or
                             "%s shoots an arrow at %s.",
                         grammar.cap(grammar.the(game.data(person).name)),
                         grammar.the(game.data(opponent).name)
+                    )
+                    game.print(str)
+                elseif sense1 then
+                    local str = string.format(
+                        game.data(person).plural and
+                            "%s shoot an arrow." or
+                            "%s shoots an arrow.",
+                        grammar.cap(grammar.the(game.data(person).name))
+                    )
+                    game.print(str)
+                elseif sense2 then
+                    local str = string.format(
+                        game.data(opponent).plural and
+                            "%s is shot by an arrow." or
+                            "%s are shot by an arrow.",
+                        grammar.cap(grammar.the(game.data(opponent).name)
+                        )
                     )
                     game.print(str)
                 end
@@ -588,7 +708,7 @@ _database.object_potion_of_health = {
             game.person_object_exit(person, object)
             local opponent = space.person
             if opponent then
-                game.person_damage(opponent, -4)
+                game.person_undamage(opponent, 4)
             end
         end
     },
@@ -604,7 +724,7 @@ _database.object_potion_of_health = {
             game.person_object_exit(person, object)
             local opponent = space.person
             if opponent then
-                game.person_damage(opponent, -16)
+                game.person_undamage(opponent, 4)
             end        
         end
     }

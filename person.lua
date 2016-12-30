@@ -13,32 +13,18 @@ _database.hero = {
     init = function (person)
         game.person_setup(person)
         person.hp = 4
-        
+        person.faction = "hero"
         local status = game.data_init("status_terrestrial")
         game.person_status_enter(person, status)
-
         local object = game.data_init("object_shortsword")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-
-        local object = game.data_init("object_staff_of_distortion")
+        local object = game.data_init("object_feather")
         game.person_object_enter(person, object)
-        local object = game.data_init("object_potion_of_health")
+        local object = game.data_init("object_sprinting_shoes")
         game.person_object_enter(person, object)
-        local object = game.data_init("object_potion_of_incineration")
+        local object = game.data_init("object_bear_totem")
         game.person_object_enter(person, object)
-        local object = game.data_init("object_potion_of_invisibility")
-        game.person_object_enter(person, object)
-        local object = game.data_init("object_staff_of_suggestion")
-        game.person_object_enter(person, object)
-        local object = game.data_init("object_charm_of_passage")
-        game.person_object_enter(person, object)
-        local object = game.data_init("object_potion_of_blindness")
-        game.person_object_enter(person, object)
-        local object = game.data_init("object_staff_of_incineration")
-        game.person_object_enter(person, object)
-
-        person.faction = "hero"
     end,
     act = function (person)
         
@@ -837,6 +823,7 @@ _database.person_bear = {
         end
         if person ~= game.person_top(person) then
             if game.person_step_to_friend(person, dist_f) then
+                print("step to friend")
                 return
             end
         end
@@ -846,6 +833,7 @@ _database.person_bear = {
             game.person_store_wherever(person, dist_f)
         end
         if game.person_step_to_dsts(person, dist_f) then
+            print("step to interests")
             return
         end
 

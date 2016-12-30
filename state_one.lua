@@ -17,10 +17,11 @@ function state_one.init()
     state_one.terrains2 = {}
     state_one.objects = {}
     state_one.objects2 = {}
-    
     state_one.persons = {}
-    state_one.person_prev = {}
-
+    state_one.persons2 = {}
+    state_one.persons3 = {}
+    state_one.persons4 = {}
+    
     state_one.fov = {}
     state_one.fov2 = {}
     state_one.perception = {}
@@ -57,7 +58,7 @@ function state_one.keypressed(k)
     state_one.path = nil
     state_one.path_set = {}
     if k == "1" then
-        print(pp(_state.branch))
+        print(pp(_state.hero.friends))
     elseif k == "2" then
         for _, space in ipairs(_state.map.spaces) do
             _state.map.visited[space] = true
@@ -524,7 +525,8 @@ function state_one.store()
     state_one.store_fov()
     state_one.store_terrains()
     state_one.store_objects()
-    state_one.store_state()
+    state_one.store_persons()
+    --state_one.store_state()
 end
 
 function state_one.store_terrains()
@@ -535,6 +537,10 @@ function state_one.store_objects()
     state_one.objects2 = state_one.objects
 end
 
+function state_one.store_persons()
+    state_one.persons2 = state_one.persons
+    state_one.persons4 = state_one.persons3
+end
 
 function state_one.store_state()
     state_one.persons = {}
@@ -566,10 +572,7 @@ function state_one.descend()
         else
             state_one.store()
             game.descend(space)
-            state_one.process_map()
-            state_one.flush()
-            state_one.timer = 0
-            state_one.animate = 0
+            state_one.refresh()
         end
     end
 end
@@ -577,7 +580,10 @@ end
 -- end the turn
 function state_one.postact()    
     game.rotate()
-    
+    state_one.refresh()
+end
+
+function state_one.refresh()
     state_one.process_map()
 
     if _state.hero.dead then
@@ -642,6 +648,7 @@ function state_one.process_map()
     state_one.process_fov()
     state_one.process_terrains()
     state_one.process_objects()
+    state_one.process_persons()
     state_one.opponents = game.person_get_opponents(_state.hero)
     state_one.process_con_map()
     state_one.process_check_map()
@@ -687,6 +694,17 @@ function state_one.process_objects()
     for _, object in ipairs(_state.map.objects) do
         if state_one.sense[object] then
             state_one.objects[object.space] = object
+        end
+    end
+end
+
+function state_one.process_persons()
+    state_one.persons = {}
+    state_one.persons3 = {}
+    for _, person in ipairs(_state.map.persons) do
+        if state_one.sense[person] then
+            state_one.persons[person.space] = person
+            state_one.persons3[person] = person.space
         end
     end
 end
@@ -983,146 +1001,64 @@ function state_one.draw_objects()
     end
 end
 
-function state_one.draw_objectsasdf()
-    if state_one.animate < 1 then
-        local objects = List.filter(
-            _state.map.objects,
-            function (object) return state_one.sense[object] end
-        )
-        for _, object in ipairs(objects) do
-            local proto = game.data(object)
-            local s = proto.sprite
-            local prev = state_one.object_prev[object]
-            if prev then
-                abstraction.set_color(proto.color)
-                local ax, ay = state_one.get_px(prev)
-                local bx, by = state_one.get_px(object.space)
-                local px = glue.lerp(ax, bx, state_one.animate)
-                local py = glue.lerp(ay, by, state_one.animate)
-                abstraction.draw(
-                    sprites[s.file].sheet,
-                    sprites[s.file][s.x][s.y],
-                    px - 8, py - 12
-                )
-            else
-                local c = List.copy(proto.color)
-                c[4] = glue.lerp(0, 255, state_one.animate)
-                abstraction.set_color(c)
-                local px, py = state_one.get_px(object.space)
-                abstraction.draw(
-                    sprites[s.file].sheet,
-                    sprites[s.file][s.x][s.y],
-                    px - 8, py - 12
-                )
-            end
-        end
-        local objects = List.filter(
-            state_one.objects,
-            function (object)
-                return not object.space or not state_one.sense[object]
-            end
-        )
-        for _, object in ipairs(objects) do
-            local proto = game.data(object)
-            local c = List.copy(proto.color)
-            local s = proto.sprite
-            local prev = state_one.object_prev[object]
-            c[4] = glue.lerp(255, 0, state_one.animate)
-            abstraction.set_color(c)
-            local px, py = state_one.get_px(prev)
-            abstraction.draw(
-                sprites[s.file].sheet,
-                sprites[s.file][s.x][s.y],
-                px - 8, py - 12
-            )
-        end
-    else
-        local objects = List.filter(
-            _state.map.objects,
-            function (object) return state_one.sense[object] end
-        )
-        for _, object in ipairs(objects) do
-            local proto = game.data(object)
-            local s = proto.sprite
-            abstraction.set_color(proto.color)
-            local px, py = state_one.get_px(object.space)
-            abstraction.draw(
-                sprites[s.file].sheet,
-                sprites[s.file][s.x][s.y],
-                px - 8, py - 12
-            )
-        end
-    end
-end
-
 function state_one.draw_persons()
     if state_one.animate < 1 then
-        local persons = List.filter(
-            _state.map.persons,
-            function (person) return state_one.sense[person] end
-        )
-        for _, person in ipairs(persons) do
-            local proto = game.data(person)
-            local s = proto.sprite
-            local prev = state_one.person_prev[person]
-            if prev then
-                abstraction.set_color(proto.color)
-                local ax, ay = state_one.get_px(prev)
-                local bx, by = state_one.get_px(person.space)
-                local px = glue.lerp(ax, bx, state_one.animate)
-                local py = glue.lerp(ay, by, state_one.animate)
-                abstraction.draw(
-                    sprites[s.file].sheet,
-                    sprites[s.file][s.x][s.y],
-                    px - 8, py - 12
-                )
-            else
-                local c = List.copy(proto.color)
-                c[4] = glue.lerp(0, 255, state_one.animate)
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.persons[space]
+            local prev = state_one.persons2[space]
+            if curr and curr == prev then
+                local proto = game.data(curr)
+                local c = proto.color
+                local s = proto.sprite
                 abstraction.set_color(c)
-                local px, py = state_one.get_px(person.space)
-                abstraction.draw(
-                    sprites[s.file].sheet,
-                    sprites[s.file][s.x][s.y],
-                    px - 8, py - 12
-                )
+                abstraction.draw_sprite(s, px - 8, py - 12)
+            else
+                if curr then
+                    local src = state_one.persons4[curr]
+                    if src then
+                        local proto = game.data(curr)
+                        local c = List.copy(proto.color)
+                        local s = proto.sprite
+                        local ax, ay = state_one.get_px(src)
+                        px = glue.lerp(ax, px, state_one.animate)
+                        py = glue.lerp(ay, py, state_one.animate)
+                        abstraction.set_color(c)
+                        abstraction.draw_sprite(s, px - 8, py - 12)
+                    else
+                        local proto = game.data(curr)
+                        local c = List.copy(proto.color)
+                        local s = proto.sprite
+                        c[4] = glue.lerp(0, 255, state_one.animate)
+                        abstraction.set_color(c)
+                        abstraction.draw_sprite(s, px - 8, py - 12)
+                    end
+                end
+                if prev then
+                    if state_one.persons3[prev] then
+                        -- pass
+                    else
+                        local proto = game.data(prev)
+                        local c = List.copy(proto.color)
+                        local s = proto.sprite
+                        c[4] = glue.lerp(255, 0, state_one.animate)
+                        abstraction.set_color(c)
+                        abstraction.draw_sprite(s, px - 8, py - 12)
+                    end
+                end
             end
-        end
-        local persons = List.filter(
-            state_one.persons,
-            function (person)
-                return not person.space or not state_one.sense[person]
-            end
-        )
-        for _, person in ipairs(persons) do
-            local proto = game.data(person)
-            local c = List.copy(proto.color)
-            local s = proto.sprite
-            local prev = state_one.person_prev[person]
-            c[4] = glue.lerp(255, 0, state_one.animate)
-            abstraction.set_color(c)
-            local px, py = state_one.get_px(prev)
-            abstraction.draw(
-                sprites[s.file].sheet,
-                sprites[s.file][s.x][s.y],
-                px - 8, py - 12
-            )
         end
     else
-        local persons = List.filter(
-            _state.map.persons,
-            function (person) return state_one.sense[person] end
-        )
-        for _, person in ipairs(persons) do
-            local proto = game.data(person)
-            local s = proto.sprite
-            abstraction.set_color(proto.color)
-            local px, py = state_one.get_px(person.space)
-            abstraction.draw(
-                sprites[s.file].sheet,
-                sprites[s.file][s.x][s.y],
-                px - 8, py - 12
-            )
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.persons[space]
+            if curr then
+                local proto = game.data(curr)
+                local c = proto.color
+                local s = proto.sprite
+                abstraction.set_color(c)
+                abstraction.draw_sprite(s, px - 8, py - 12)
+            end
         end
     end
 end

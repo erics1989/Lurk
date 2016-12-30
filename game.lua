@@ -102,6 +102,7 @@ end
 
 function game.descend(space)
     game.person_exit(_state.hero)
+    _state.hero.friends = {}
     game.map_store()
     local terrain = space.terrain
     local f = function ()
@@ -638,10 +639,15 @@ function game.person_damage(person, points)
     if person == _state.hero then
         table.insert(_state.records, { name = "damage" })
     end
-    person.damage = math.max(person.damage + points, 0)
+    person.damage = person.damage + points, 0
     if person.damage >= person.hp then
         game.person_die(person)
     end
+end
+
+-- person gets undamaged
+function game.person_undamage(person, points)
+    person.damage = math.max(person.damage - points, 0)
 end
 
 -- 2 persons relocate
@@ -769,14 +775,23 @@ end
 
 -- shorthand for lunge attacks
 function game.person_poststep_attack3(person, src)
-    local dx = math.max(math.min(person.space.x - src.x, 1), -1)
-    local dy = math.max(math.min(person.space.y - src.y, 1), -1)
-    local space = game.get_space(
-        person.space.x + dx,
-        person.space.y + dy
-    )
-    if space then
-        if space.person and space.person.faction ~= person.faction then
+    local dx = person.space.x - src.x
+    local dy = person.space.y - src.y
+    local dz = person.space.z - src.z
+    if dx == 0 or dy == 0 or dz == 0 then
+        local x = person.space.x
+        if dx ~= 0 then
+            x = x + dx / math.abs(dx)
+        end
+        local y = person.space.y
+        if dy ~= 0 then
+            y = y + dy / math.abs(dy)
+        end
+        local space = game.get_space(x, y)
+        if  space and
+            space.person and
+            space.person.faction ~= person.faction
+        then
             game.person_attack(person, space)
         end
     end
@@ -815,8 +830,13 @@ function game.person_step_to(person, dst_f, valid_f, dist_f, stop)
         stop
     )
     local space = path and path[2]
+    if not path then
+        print("no path")
+    end
     if space and game.space_vacant(space) then
         return game.person_step(person, space)
+    else
+        print("no space")
     end
 end
 
@@ -864,6 +884,7 @@ end
 
 -- person steps on a path to the leader
 function game.person_step_to_friend(person, dist_f)
+    print(pp(person.friends[1]))
     local dst_f = function (space)
         return Hex.dist(space, person.friends[1].space) <= 1
     end

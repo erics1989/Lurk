@@ -112,27 +112,23 @@ function state_aim.update(t)
 end
 
 function state_aim.draw()
-    local f = function (space, bcolor, color, character)
-        -- perception range
-        if state_one.perception[space] then
-            bcolor = { bcolor[1], bcolor[2] + 64, bcolor[3] }
-            color = { color[1], color[2] + 64, color[3] }
+    state_one.draw_terrains()
+    state_one.draw_fov()
+    state_one.draw_check()
+    state_aim.draw_range()
+    state_one.draw_objects()
+    state_one.draw_persons()
+    state_one.draw_animations()
+end
+
+function state_aim.draw_range()
+    for _, space in ipairs(_state.map.spaces) do
+        local px, py = state_one.get_px(space)
+        local curr = state_aim.valid[space]
+        if curr then
+            abstraction.set_color(color_constants.range)
+            state_one.draw_hex(px, py)
         end
-        -- attack range
-        if state_one.check[space] then
-            bcolor = { bcolor[1] + 64, bcolor[2], bcolor[3] }
-            color = { color[1] + 64, color[2], color[3] }
-        end
-        -- valid targets
-        if state_aim.valid[space] then
-            bcolor = { bcolor[1] + 64, bcolor[2] + 64, bcolor[3] + 64 }
-            color = { color[1] + 64, color[2] + 64, color[3] + 64}
-        end
-        -- cursor
-        local circle = space == state_aim.cursor
-        return bcolor, color, character, circle
     end
-    state_one.draw_map()
-    state_one.draw_sidebar()
 end
 
