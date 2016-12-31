@@ -445,6 +445,137 @@ _database.object_regeneration_charm = {
     end
 }
 
+_database.object_shovel = {
+    name = "shovel",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a shovel. [use] it to dig through stone terrain.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) == 1 and
+                space.terrain.id == "terrain_stone"
+        end,
+        execute = function (person, object, space)
+            game.print_verb1(
+                person,
+                "%s uses a shovel.",
+                "%s use a shovel."
+            )
+            game.terrain_exit(space.terrain)
+            local terrain = game.data_init("terrain_dot")
+            game.terrain_enter(terrain, space)
+        end
+    }
+}
+
+_database.object_auto_sentry = {
+    name = "shovel",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "an auto-sentry. [use] to setup.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) <= 1 and
+                game.space_vacant(space)
+        end,
+        execute = function (person, object, space)
+            game.print_verb1(
+                person,
+                "%s sets up an auto-sentry.",
+                "%s set up an auto-sentry."
+            )
+            local person2 = game.data_init("person_auto_sentry")
+            game.person_enter(person2, space)
+            game.person_add_friend(person, person2)
+        end
+    }
+}
+
+_database.object_curious_binoculars = {
+    name = "curious binoculars",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a pair of binoculars. [use] to change places with a person.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                space.person and
+                person.sense[space.person]
+        end,
+        execute = function (person, object, space)
+            local opponent = space.person
+            game.person_transpose(person, opponent)
+        end
+    }
+}
+
+_database.object_blurred_photograph = {
+    name = "blurred photograph",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    character = "/",
+    description = "a blurred photograph. [use] to escape from life's difficulties.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    use = {
+        valid = function (person, object)
+            return true
+        end,
+        range = function (person, object, space)
+            return
+                Hex.dist(person.space, space) <= 1 and
+                game.space_vacant(space)
+        end,
+        execute = function (person, object, space)
+            game.print_verb1(
+                person,
+                "%s uses the blurred photograph.",
+                "%s use the blurred photograph."
+            )
+            local status = game.data_init("status_invisible")
+            game.person_status_enter(person, status)
+            local src = person.space
+            game.person_step(person, space)
+            local person2 = game.data_init(
+                "person_blurred_photograph_image"
+            )
+            person2.person_ref = person
+            person2.status_ref = status
+            game.person_enter(person2, src)
+            game.person_add_friend(person, person2)
+        end
+    }
+}
+
+
 _database.object_orb = {
     name = "The Seed of Despair",
     color = color_constants.red,
@@ -504,58 +635,6 @@ _database.object_machete = {
             game.person_can_attack(person)
         then
             game.person_poststep_attack2(person, src)
-        end
-    end
-}
-
-_database.object_spearasdf = {
-    name = "spear",
-    color = { 255, 255, 255 }, character = ")",
-    part = "hand", pickup = true,
-    init = function (object)
-        game.object_setup(object)
-    end,
-    stab = true,
-    attack = {
-        range = function (person, object, space)
-            return Hex.dist(person.space, space) == 1
-        end,
-        execute = function (person, object, space)
-            local opponent = space.person
-            if opponent then
-                if game.person_sense(_state.hero, person) then
-                    local str = string.format(
-                        game.data(person).plural and
-                            "%s skewer %s." or
-                            "%s skewers %s.",
-                        grammar.cap(grammar.the(game.data(person).name)),
-                        grammar.the(game.data(opponent).name)
-                    )
-                    game.print(str)
-                end
-                game.person_damage(opponent, 1)
-            end
-        end
-    },
-    equip = {
-        valid = function (person, object, space)
-            return not game.person_object_equipped(person, object)              end,
-        execute = function (person, object, space)
-            if game.person_object_equipped(person, object) then
-                game.person_object_unequip(person, object)
-            else
-                game.person_object_equip(person, object)
-            end
-        end
-    },
-    init = function (object)
-    
-    end,
-    person_poststep = function (person, object, src)
-        if  game.person_object_equipped(person, object) and
-            game.person_can_attack(person)
-        then
-            game.person_poststep_attack3(person, src)
         end
     end
 }

@@ -16,7 +16,7 @@ _database.hero = {
         person.faction = "hero"
         local status = game.data_init("status_terrestrial")
         game.person_status_enter(person, status)
-        local object = game.data_init("object_bow_and_arrows")
+        local object = game.data_init("object_sword")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
         local object = game.data_init("object_feather")
@@ -28,6 +28,14 @@ _database.hero = {
         local object = game.data_init("object_fire_staff")
         game.person_object_enter(person, object)
         local object = game.data_init("object_regeneration_charm")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_shovel")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_auto_sentry")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_curious_binoculars")
+        game.person_object_enter(person, object)
+        local object = game.data_init("object_blurred_photograph")
         game.person_object_enter(person, object)
     end,
     act = function (person)
@@ -844,4 +852,82 @@ _database.person_bear = {
         game.person_rest(person)
     end
 }
+
+_database.person_auto_sentry = {
+    name = "auto-sentry",
+    description = "an auto-sentry.",
+    color = { 255, 255, 255 },
+    character = "a",
+    sprite = { file = "resource/sprite/Monsters.png", x = 6, y = 10 },
+    sprite2 = { file = "resource/sprite/Monsters.png", x = 6, y = 11 },
+    init = function (person)
+        game.person_setup(person)
+        person.hp = 1
+        local object = game.data_init("object_shortbow")
+        game.person_object_enter(person, object)
+        game.person_object_equip(person, object)
+    end,
+    act = function (person)
+        game.person_act(person)
+    end,
+    person_act = function (person)
+        local opponents = game.person_get_opponents(person)
+        if next(opponents) then
+            game.person_store_opponent_positions(person, dist_f, opponents)
+            local pos_f = function (space)
+                for _, opponent in ipairs(opponents) do
+                    local d = Hex.dist(space, opponent.space)
+                    if  2 <= d and d <= 4 and
+                        Hex.axis(space, opponent.space) and
+                        not game.obstructed(
+                            space,
+                            opponent.space,
+                            function (space)
+                                return
+                                    game.data(space.terrain).stand and
+                                    (
+                                        not space.person or 
+                                        not person.sense[space.person] or
+                                        person == space.person
+                                    )
+                            end
+                        )
+                    then
+                        return function ()
+                            return game.person_attack(person, opponent.space)
+                        end
+                    end
+                end
+            end
+            local f = pos_f(person.space)
+            if f then
+                return f()
+            end
+        end
+        game.person_rest(person)
+    end
+}
+
+_database.person_blurred_photograph_image = {
+    name = "mirror image",
+    description = "a mirror image.",
+    color = { 255, 255, 255 },
+    character = "a",
+    sprite = { file = "resource/sprite/Monsters.png", x = 6, y = 10 },
+    sprite2 = { file = "resource/sprite/Monsters.png", x = 6, y = 11 },
+    init = function (person)
+        game.person_setup(person)
+        person.hp = 1
+    end,
+    act = function (person)
+        game.person_act(person)
+    end,
+    person_act = function (person)
+
+    end,
+    person_die = function (person)
+        game.person_status_exit(person.person_ref, person.status_ref)
+    end
+}
+
 

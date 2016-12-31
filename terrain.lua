@@ -72,7 +72,6 @@ _database.terrain_tree = {
     end
 }
 
-
 _database.terrain_fire = {
     name = "fire",
     bcolor = color_constants.base03,

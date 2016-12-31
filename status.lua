@@ -161,7 +161,9 @@ _database.status_invisible = {
         return 1
     end,
     person_postact = function (person, status)
-        game.person_status_decrement(person, status)
+        if status.counters then
+            game.person_status_decrement(person, status)
+        end
     end
 }
 
