@@ -7,7 +7,6 @@ HS = 24
 SIDEBAR_X = 960
 ANIMATE_LEN = 10/60
 
-
 function state_one.init()
     state_one.sprites = true
     local px, py = Hex.pos({ x = 0, y = 0 }, HS)
@@ -21,10 +20,11 @@ function state_one.init()
     state_one.persons2 = {} -- space -> person (prev)
     state_one.persons3 = {} -- person -> space
     state_one.persons4 = {} -- person -> space (prev)
-    
+
     state_one.fov = {}
     state_one.fov2 = {}
     state_one.perception = {}
+    state_one.perception2 = {}
     state_one.check = {}
     state_one.check2 = {}
     state_one.path = nil
@@ -33,6 +33,8 @@ function state_one.init()
     state_one.timer = 0
     state_one.mouse = false
     state_one.animate = 0
+    state_one.animate_sprite = 0
+    state_one.animate_noise = 0
     state_one.records = {}
     state_one.animations = {}
 
@@ -73,11 +75,11 @@ function state_one.keypressed(k)
     elseif k == "k" or k == "kp8" then
         state_one.step(0, -1)
     elseif k == "j" or k == "kp2" then
-        state_one.step(0, 1) 
+        state_one.step(0, 1)
     elseif k == "y" or k == "kp7" then
         state_one.step(0, -1)
     elseif k == "n" or k == "kp3" then
-        state_one.step(0, 1) 
+        state_one.step(0, 1)
     elseif k == "b" or k == "kp1" then
         state_one.step(-1, 1)
     elseif k == "u" or k == "kp9" then
@@ -415,7 +417,7 @@ function state_one.mousemoved(px, py, dpx, dpy)
         then
             state_one.describe = space.person
         elseif
-            space.object and 
+            space.object and
             game.person_sense(_state.hero, space.object)
         then
             state_one.describe = space.object
@@ -475,7 +477,7 @@ function state_one.step(dx, dy)
                         state_one.flush()
                     end
                 else
-                    if game.person_can_step(_state.hero) then 
+                    if game.person_can_step(_state.hero) then
                         state_one.preact()
                         game.person_transpose(_state.hero, space.person)
                         state_one.postact()
@@ -556,6 +558,7 @@ end
 function state_one.store_fov()
     state_one.fov2 = state_one.fov
     state_one.check2 = state_one.check
+    state_one.perception2 = state_one.perception
 end
 
 function state_one.descend()
@@ -567,18 +570,18 @@ function state_one.descend()
                 table.insert(states, state_victory)
             else
                 game.print("You can't ascend.")
-                state_one.flush()
+                -- state_one.flush()
             end
         else
-            state_one.store()
+            --state_one.store()
             game.descend(space)
-            state_one.refresh()
+            state_one.init()
         end
     end
 end
 
 -- end the turn
-function state_one.postact()    
+function state_one.postact()
     game.rotate()
     state_one.refresh()
 end
@@ -588,18 +591,20 @@ function state_one.refresh()
 
     if _state.hero.dead then
         state_one.die()
+        state_one.flush()
+    elseif _state.hero.stairs then
+        state_one.descend()
     else
         state_one.auto_pickup()
+        state_one.flush()
     end
-    
-    state_one.flush()
 
     state_one.records = List.copy(_state.records)
     _state.records = {}
 
     state_one.animations = {}
     state_one.push_animations()
-    
+
     state_one.animate = 0
 end
 
@@ -758,6 +763,8 @@ end
 function state_one.update(t)
     state_one.timer = state_one.timer + t
     state_one.animate = state_one.animate + t / ANIMATE_LEN
+    state_one.animate_sprite = state_one.animate_sprite + t
+    state_one.animate_noise = state_one.animate_noise + t
 end
 
 function state_one.draw()
@@ -814,7 +821,9 @@ end
 
 function state_one.draw_map(highlight)
     state_one.draw_terrains()
+    state_one.draw_path()
     state_one.draw_fov()
+    state_one.draw_perception()
     state_one.draw_check()
     state_one.draw_objects()
     state_one.draw_persons()
@@ -831,6 +840,17 @@ function state_one.draw_terrains()
             if curr and curr == prev then
                 local proto = game.data(curr)
                 local bc = proto.bcolor
+                if proto.water then
+                    local v = love.math.noise(
+                        state_one.animate_noise * 0.5 + space.x * 0.5,
+                        space.y * 0.5
+                    ) * 2 - 1
+                    bc = {
+                        bc[1] + 16 * v,
+                        bc[2] + 16 * v,
+                        bc[3] + 16 * v
+                    }
+                end
                 local c = proto.color
                 local s = proto.sprite
                 abstraction.set_color(bc)
@@ -841,6 +861,17 @@ function state_one.draw_terrains()
                 if curr then
                     local proto = game.data(curr)
                     local bc = List.copy(proto.bcolor)
+                    if proto.water then
+                        local v = love.math.noise(
+                            state_one.animate_noise * 0.5 + space.x * 0.5,
+                            space.y * 0.5
+                        ) * 2 - 1
+                        bc = {
+                            bc[1] + 16 * v,
+                            bc[2] + 16 * v,
+                            bc[3] + 16 * v
+                        }
+                    end
                     local c = List.copy(proto.color)
                     local s = proto.sprite
                     bc[4] = glue.lerp(0, 255, state_one.animate)
@@ -851,9 +882,19 @@ function state_one.draw_terrains()
                     abstraction.draw_sprite(s, px - 8, py - 12)
                 end
                 if prev then
-                    print("hello")
                     local proto = game.data(prev)
                     local bc = List.copy(proto.bcolor)
+                    if proto.water then
+                        local v = love.math.noise(
+                            state_one.animate_noise * 0.5 + space.x * 0.5,
+                            space.y * 0.5
+                        ) * 2 - 1
+                        bc = {
+                            bc[1] + 16 * v,
+                            bc[2] + 16 * v,
+                            bc[3] + 16 * v
+                        }
+                    end
                     local c = List.copy(proto.color)
                     local s = proto.sprite
                     bc[4] = glue.lerp(255, 0, state_one.animate)
@@ -872,6 +913,17 @@ function state_one.draw_terrains()
             if curr then
                 local proto = game.data(curr)
                 local bc = proto.bcolor
+                if proto.water then
+                    local v = love.math.noise(
+                        state_one.animate_noise * 0.5 + space.x * 0.5,
+                        space.y * 0.5
+                    ) * 2 - 1
+                    bc = {
+                        bc[1] + 16 * v,
+                        bc[2] + 16 * v,
+                        bc[3] + 16 * v
+                    }
+                end
                 local c = proto.color
                 local s = proto.sprite
                 abstraction.set_color(bc)
@@ -955,6 +1007,52 @@ function state_one.draw_check()
     end
 end
 
+function state_one.draw_perception()
+    if state_one.animate < 1 then
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.perception[space]
+            local prev = state_one.perception2[space]
+            if curr and prev then
+                abstraction.set_color(color_constants.perception)
+                state_one.draw_hex(px, py)
+            else
+                if curr then
+                    local c = List.copy(color_constants.perception)
+                    c[4] = glue.lerp(0, 127, state_one.animate)
+                    abstraction.set_color(c)
+                    state_one.draw_hex(px, py)
+                end
+                if prev then
+                    local c = List.copy(color_constants.perception)
+                    c[4] = glue.lerp(127, 0, state_one.animate)
+                    abstraction.set_color(c)
+                    state_one.draw_hex(px, py)
+                end
+            end
+        end
+    else
+        for _, space in ipairs(_state.map.spaces) do
+            local px, py = state_one.get_px(space)
+            local curr = state_one.perception[space]
+            if curr then
+                abstraction.set_color(color_constants.perception)
+                state_one.draw_hex(px, py)
+            end
+        end
+    end
+end
+
+function state_one.draw_path()
+    if state_one.path then
+        for _, space in ipairs(state_one.path) do
+            local px, py = state_one.get_px(space)
+            abstraction.set_color(color_constants.path)
+            state_one.draw_hex(px, py)
+        end
+    end
+end
+
 function state_one.draw_objects()
     if state_one.animate < 1 then
         for _, space in ipairs(_state.map.spaces) do
@@ -1010,7 +1108,9 @@ function state_one.draw_persons()
             if curr and curr == prev then
                 local proto = game.data(curr)
                 local c = proto.color
-                local s = proto.sprite
+                local s =
+                    state_one.animate_sprite % 1 < 0.5 and proto.sprite
+                    or proto.sprite2
                 abstraction.set_color(c)
                 abstraction.draw_sprite(s, px - 8, py - 12)
             else
@@ -1019,7 +1119,9 @@ function state_one.draw_persons()
                     if src then
                         local proto = game.data(curr)
                         local c = List.copy(proto.color)
-                        local s = proto.sprite
+                        local s =
+                            state_one.animate_sprite % 1 < 0.5 and proto.sprite
+                            or proto.sprite2
                         local ax, ay = state_one.get_px(src)
                         px = glue.lerp(ax, px, state_one.animate)
                         py = glue.lerp(ay, py, state_one.animate)
@@ -1028,7 +1130,9 @@ function state_one.draw_persons()
                     else
                         local proto = game.data(curr)
                         local c = List.copy(proto.color)
-                        local s = proto.sprite
+                        local s =
+                            state_one.animate_sprite % 1 < 0.5 and proto.sprite
+                            or proto.sprite2
                         c[4] = glue.lerp(0, 255, state_one.animate)
                         abstraction.set_color(c)
                         abstraction.draw_sprite(s, px - 8, py - 12)
@@ -1040,7 +1144,9 @@ function state_one.draw_persons()
                     else
                         local proto = game.data(prev)
                         local c = List.copy(proto.color)
-                        local s = proto.sprite
+                        local s =
+                            state_one.animate_sprite % 1 < 0.5 and proto.sprite
+                            or proto.sprite2
                         c[4] = glue.lerp(255, 0, state_one.animate)
                         abstraction.set_color(c)
                         abstraction.draw_sprite(s, px - 8, py - 12)
@@ -1055,7 +1161,9 @@ function state_one.draw_persons()
             if curr then
                 local proto = game.data(curr)
                 local c = proto.color
-                local s = proto.sprite
+                local s =
+                    state_one.animate_sprite % 1 < 0.5 and proto.sprite
+                    or proto.sprite2
                 abstraction.set_color(c)
                 abstraction.draw_sprite(s, px - 8, py - 12)
             end
@@ -1084,7 +1192,7 @@ end
 function state_one.draw_map(highlightF)
     local anim = state_one.timer % 1 <= 0.5 and 1 or 2
     love.graphics.setFont(fonts.monospace)
-    for _, space in ipairs(_state.map.spaces) do        
+    for _, space in ipairs(_state.map.spaces) do
         local px, py = Hex.pos(space, HS)
         px = px - state_one.camera.px
         py = py - state_one.camera.py
@@ -1312,7 +1420,7 @@ end
 -- draw the sidebar
 function state_one.draw_sidebar()
     love.graphics.setFont(fonts.monospace)
-    
+
     local px = SIDEBAR_X + 12
     local py = 12
     local w = abstraction.font_w(fonts.monospace)
@@ -1420,7 +1528,7 @@ function state_one.draw_sidebar()
 
 
     -- state_one.draw_sidebar_objects()
-    
+
     -- opponents
     --[[
     local opponents = List.concat(
@@ -1522,4 +1630,3 @@ function state_one.print(bcolor, color, str, px, py)
     love.graphics.setColor(color)
     abstraction.print(str, px, py)
 end
-

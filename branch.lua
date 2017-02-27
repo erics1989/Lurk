@@ -8,7 +8,6 @@ function get_dnstairs()
         return space.terrain.id == "terrain_stairs_dn"
     end
     local spaces = List.filter(_state.map.spaces, f)
-    print(pp(spaces))
     return spaces[1]
 end
 
@@ -97,7 +96,7 @@ local function generate_map2(depth)
         )
         ]]
 
-        -- place chasms 
+        -- place chasms
         automata(
             function (space)
                 return
@@ -178,7 +177,7 @@ local function generate_map2(depth)
             local terrain = game.data_init("terrain_tree")
             game.terrain_enter(terrain, space)
         end
-        
+
         --[[
         -- standards check
         local f = function (space)
@@ -261,7 +260,7 @@ local function generate_map2(depth)
         local str = treasures[game.rand1(#treasures)]
         local spaces = List.filter(
             _state.map.spaces,
-            function (space) 
+            function (space)
                 return
                     game.data(space.terrain).stand and
                     not game.data(space.terrain).water and
@@ -278,7 +277,7 @@ _database.branch_zero = {
     [1] = {
         encounter_count = 4,
         encounters = {
-            "encounter_person_ooze",
+            "encounter_person_kobold_warrior",
             "encounter_person_kobold_warrior",
             "encounter_person_kobold_piker",
         },
@@ -292,6 +291,10 @@ _database.branch_zero = {
             "object_bear_totem",
             "object_fire_staff",
             "object_regeneration_charm",
+            "object_shovel",
+            "object_curious_binoculars",
+            "object_cuckoos_beak",
+            "object_chameleon_cloak",
             "object_potion_of_health",
             "object_potion_of_distortion",
             "object_potion_of_blindness",
@@ -303,6 +306,7 @@ _database.branch_zero = {
             "object_potion_of_invisibility",
             "object_potion_of_incineration",
             "object_charm_of_passage",
+            "object_charm_of_verdure",
             "object_staff_of_distortion",
             "object_staff_of_suggestion",
         }
@@ -315,6 +319,19 @@ _database.branch_zero = {
             "encounter_person_kobold_archer"
         },
         treasures = {
+            "object_sword",
+            "object_axe",
+            "object_spear",
+            "object_hammer",
+            "object_feather",
+            "object_sprinting_shoes",
+            "object_bear_totem",
+            "object_fire_staff",
+            "object_regeneration_charm",
+            "object_shovel",
+            "object_curious_binoculars",
+            "object_cuckoos_beak",
+            "object_chameleon_cloak",
             "object_potion_of_health",
             "object_potion_of_distortion",
             "object_potion_of_blindness",
@@ -325,8 +342,8 @@ _database.branch_zero = {
             "object_potion_of_blindness",
             "object_potion_of_invisibility",
             "object_potion_of_incineration",
-            "object_staff_of_incineration",
             "object_charm_of_passage",
+            "object_charm_of_verdure",
             "object_staff_of_distortion",
             "object_staff_of_suggestion",
         }
@@ -340,6 +357,19 @@ _database.branch_zero = {
             "encounter_person_ooze",
         },
         treasures = {
+            "object_sword",
+            "object_axe",
+            "object_spear",
+            "object_hammer",
+            "object_feather",
+            "object_sprinting_shoes",
+            "object_bear_totem",
+            "object_fire_staff",
+            "object_regeneration_charm",
+            "object_shovel",
+            "object_curious_binoculars",
+            "object_cuckoos_beak",
+            "object_chameleon_cloak",
             "object_potion_of_health",
             "object_potion_of_distortion",
             "object_potion_of_blindness",
@@ -350,8 +380,8 @@ _database.branch_zero = {
             "object_potion_of_blindness",
             "object_potion_of_invisibility",
             "object_potion_of_incineration",
-            "object_staff_of_incineration",
             "object_charm_of_passage",
+            "object_charm_of_verdure",
             "object_staff_of_distortion",
             "object_staff_of_suggestion",
         }
@@ -366,6 +396,19 @@ _database.branch_zero = {
             "encounter_person_bear",
         },
         treasures = {
+            "object_sword",
+            "object_axe",
+            "object_spear",
+            "object_hammer",
+            "object_feather",
+            "object_sprinting_shoes",
+            "object_bear_totem",
+            "object_fire_staff",
+            "object_regeneration_charm",
+            "object_shovel",
+            "object_curious_binoculars",
+            "object_cuckoos_beak",
+            "object_chameleon_cloak",
             "object_potion_of_health",
             "object_potion_of_distortion",
             "object_potion_of_blindness",
@@ -376,11 +419,10 @@ _database.branch_zero = {
             "object_potion_of_blindness",
             "object_potion_of_invisibility",
             "object_potion_of_incineration",
-            "object_staff_of_incineration",
             "object_charm_of_passage",
+            "object_charm_of_verdure",
             "object_staff_of_distortion",
             "object_staff_of_suggestion",
         }
     }
 }
-

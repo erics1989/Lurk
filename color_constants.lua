@@ -23,6 +23,7 @@ color_constants.green =  { 133, 153, 0 }
 
 color_constants.highlight = { 0, 0, 0, 127 }
 color_constants.check = { 220, 50, 47, 127 }
+color_constants.perception = { 108, 113, 196, 127 }
 color_constants.fov = { 0, 0, 0, 127 }
+color_constants.path = { 255, 255, 255, 63 }
 color_constants.range = { 255, 255, 255, 127 }
-

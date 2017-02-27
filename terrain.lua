@@ -182,13 +182,19 @@ _database.terrain_stairs_up = {
     sprite = { file = "resource/sprite/Terrain.png", x = 15, y = 1 },
     sense = true,
     stand = true,
-    enter = function (terrain)
-        game.print("You ascend the stairs.")
-        local f = function (space)
-            return space.terrain.id == "terrain_stairs_dn"
+    on_person_relocate = function (person, terrain)
+        if person == _state.hero then
+            _state.hero.stairs = function ()
+                game.print("You ascend the stairs.")
+                local stairs_dn = List.filter(
+                    _state.map.spaces,
+                    function (space)
+                        return space.terrain.id == "terrain_stairs_dn"
+                    end
+                )
+                game.person_enter(_state.hero, stairs_dn[1])
+            end
         end
-        local dst = List.filter(_state.map.spaces, f)[1]
-        game.person_enter(_state.hero, dst)
     end
 }
 
@@ -200,13 +206,19 @@ _database.terrain_stairs_dn = {
     sprite = { file = "resource/sprite/Terrain.png", x = 14, y = 1 },
     sense = true,
     stand = true,
-    enter = function (terrain)
-        game.print("You descend the stairs.")
-        local f = function (space)
-            return space.terrain.id == "terrain_stairs_up"
+    on_person_relocate = function (person, terrain)
+        if person == _state.hero then
+            _state.hero.stairs = function ()
+                game.print("You ascend the stairs.")
+                local stairs_up = List.filter(
+                    _state.map.spaces,
+                    function (space)
+                        return space.terrain.id == "terrain_stairs_up"
+                    end
+                )
+                game.person_enter(_state.hero, stairs_up[1])
+            end
         end
-        local dst = List.filter(_state.map.spaces, f)[1]
-        game.person_enter(_state.hero, dst)
     end
 }
 
@@ -249,4 +261,3 @@ _database.terrain_chasm = {
         game.postpone(door.name, door.n, f)
     end
 }
-

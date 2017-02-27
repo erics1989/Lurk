@@ -114,7 +114,7 @@ function generate_aux.get_drunk_path(src, valid_f, n)
             end
         end
     end
-    
+
     local f = function (space)
         return set[space]
     end
@@ -275,4 +275,3 @@ function generate_aux.disjoint(spaces1, spaces2)
 end
 
 return generate_aux
-

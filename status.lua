@@ -5,6 +5,7 @@ _database = _database or {}
 
 _database.status_terrestrial = {
     name = "terrestrial",
+    hide = true,
     character = ".",
     person_status_enter = function (person, status)
         person.status_terrestrial = true
@@ -51,6 +52,31 @@ _database.status_stunned = {
     end,
     person_status_exit = function (person, status)
         person.status_stunned = nil
+    end,
+    person_postact = function (person, status)
+        game.person_status_decrement(person, status)
+    end
+}
+
+_database.status_sleep = {
+    name = "sleeping",
+    character = "-",
+    person_status_enter = function (person, status)
+        person.status_sleeping = status
+        game.print_verb1(
+            person,
+            "%s falls asleep.",
+            "%s fall asleep."
+        )
+    end,
+    person_status_exit = function (person, status)
+        person.status_sleeping = nil
+    end,
+    person_can_step = function (person, status)
+        return false
+    end,
+    person_can_attack = function (person, status)
+        return false
     end,
     person_postact = function (person, status)
         game.person_status_decrement(person, status)
@@ -226,7 +252,7 @@ _database.status_underwater = {
     character = "~",
     sprite = { file = "resource/sprite/FX_General.png", x = 13, y = 2 },
     init = function (status)
-    
+
     end,
     person_status_enter = function (person, status)
         person.status_underwater = status
@@ -274,7 +300,7 @@ _database.status_regenerating = {
     object_status_enter = function (object, status)
         object.status_regenerating = status
     end,
-    object_status_exit = function (object, status)  
+    object_status_exit = function (object, status)
         object.status_regenerating = nil
         local space = object.space
         game.object_exit(object)
@@ -287,4 +313,3 @@ _database.status_regenerating = {
         end
     end
 }
-

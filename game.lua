@@ -9,9 +9,9 @@ OBJECT_LIMIT = 26
 function game.init()
     seed = SEED or os.time()
     print(string.format("seed: %d", seed))
-    
+
     _state = {}
-    
+
     _state.rand1 = love.math.newRandomGenerator(seed)
     _state.rand2 = love.math.newRandomGenerator(seed)
     _state.past_branchs = {}
@@ -21,7 +21,7 @@ function game.init()
     _state.records = {}
 
     game.print("(press [?] for controls, hints)")
-    
+
     -- create hero
     _state.hero = game.data_init("hero")
 
@@ -92,7 +92,7 @@ function game.map_enter(name, n, enter_f)
             end
         end
     end
-    
+
     if _state.postpone[path] then
         for _, f in ipairs(_state.postpone[path]) do
             f()
@@ -108,15 +108,12 @@ function game.map_enter(name, n, enter_f)
 end
 
 function game.descend(space)
+    local terrain = space.terrain
     game.person_exit(_state.hero)
     _state.hero.friends = {}
     game.map_store()
-    local terrain = space.terrain
-    local f = function ()
-        game.data(terrain).enter(terrain)
-    end
-    game.map_enter(terrain.door.name, terrain.door.n, f)
-    
+    game.map_enter(terrain.door.name, terrain.door.n, _state.hero.stairs)
+    _state.hero.stairs = nil
 end
 
 -- store the map
@@ -312,7 +309,7 @@ function game.person_act(person)
     game.person_preact(person)
     if person.space then
         if person.skip then
-        
+
         else
             local f = game.data(person).person_act
             if f then
@@ -383,6 +380,10 @@ function game.person_relocate(person, space)
         if f then
             f(person, decoration, src)
         end
+    end
+    local f = game.data(space.terrain).on_person_relocate
+    if f then
+        f(person, terrain)
     end
 end
 
@@ -751,7 +752,7 @@ function game.person_space_proj(person, space)
                 return
                     game.data(space.terrain).stand and
                     (
-                        not space.person or 
+                        not space.person or
                         not person.sense[space.person] or
                         person == space.person
                     )
@@ -771,6 +772,9 @@ end
 
 -- shorthand for slash attacks
 function game.person_poststep_attack2(person, src)
+    if person.status_underwater then
+        return
+    end
     local spaces = List.intersection(
         Hex.adjacent(src),
         Hex.adjacent(person.space)
@@ -784,6 +788,9 @@ end
 
 -- shorthand for lunge attacks
 function game.person_poststep_attack3(person, src)
+    if person.status_underwater then
+        return
+    end
     local dx = person.space.x - src.x
     local dy = person.space.y - src.y
     local dz = person.space.z - src.z
@@ -839,13 +846,8 @@ function game.person_step_to(person, dst_f, valid_f, dist_f, stop)
         stop
     )
     local space = path and path[2]
-    if not path then
-        print("no path")
-    end
     if space and game.space_vacant(space) then
         return game.person_step(person, space)
-    else
-        print("no space")
     end
 end
 
@@ -893,7 +895,6 @@ end
 
 -- person steps on a path to the leader
 function game.person_step_to_friend(person, dist_f)
-    print(pp(person.friends[1]))
     local dst_f = function (space)
         return Hex.dist(space, person.friends[1].space) <= 1
     end

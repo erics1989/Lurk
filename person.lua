@@ -37,9 +37,15 @@ _database.hero = {
         game.person_object_enter(person, object)
         local object = game.data_init("object_blurred_photograph")
         game.person_object_enter(person, object)
+        local object = game.data_init("object_cuckoos_beak")
+        game.person_object_enter(person, object)
+        -- local object = game.data_init("object_chameleon_cloak")
+        -- game.person_object_enter(person, object)
+        local object = game.data_init("object_pendulum")
+        game.person_object_enter(person, object)
     end,
     act = function (person)
-        
+
     end,
     attack = {
         range = function (person, object, space)
@@ -78,13 +84,20 @@ _database.person_kobold_warrior = {
         local object = game.data_init("object_machete")
         game.person_object_enter(person, object)
         game.person_object_equip(person, object)
-        person.interests = {}
+        person.points = {}
     end,
     act = function (person)
         game.person_act(person)
     end,
     person_act = function (person)
         local opponents = game.person_get_opponents(person)
+        local valid_f = function (space)
+            if game.person_can_step(person) then
+                return game.space_stand(space)
+            end
+        end
+
+        -- dist_f
         local dist_f = function (src, dst)
             local cost = 1
             if  game.data(dst.terrain).fire or
@@ -109,33 +122,35 @@ _database.person_kobold_warrior = {
 
         -- attack opponents
         if next(opponents) then
-            game.person_store_opponent_positions(person, dist_f, opponents)
-            local pos_f = function (space)
+            game.person_set_point_opponents(
+                person, valid_f, dist_f, opponents
+            )
+            local plan_f = function (space)
                 for _, opponent in ipairs(opponents) do
                     if Hex.dist(space, opponent.space) == 1 then
                         return function ()
-                            return game.person_attack(person, opponent.space)
+                            game.person_attack(person, opponent.space)
                         end
                     end
                 end
             end
-            if game.person_do_or_step(person, pos_f, dist_f) then
+            if game.person_execute(person, plan_f, valid_f, dist_f) then
                 return
             end
         end
 
         -- step to friend 1
-        if person ~= game.person_top(person) then
-            if game.person_step_to_friend(person, dist_f) then
+        if person ~= person.friends[1] then
+            if game.person_regroup(person, valid_f, dist_f) then
                 return
             end
         end
 
-        person.interests[person.space] = nil
-        if next(person.interests) == nil then
-            game.person_store_wherever(person, dist_f)
+        person.points[person.space] = nil
+        if not next(person.points) then
+            game.person_set_point_rng(person, valid_f, dist_f)
         end
-        if game.person_step_to_dsts(person, dist_f) then
+        if game.person_step_to_points(person, valid_f, dist_f) then
             return
         end
 
@@ -479,7 +494,7 @@ _database.person_kobold_archer = {
                     return
                         game.data(space.terrain).stand and
                         (
-                            not space.person or 
+                            not space.person or
                             not _state.hero.sense[space.person] or
                             person == space.person
                         )
@@ -523,7 +538,7 @@ _database.person_kobold_archer = {
                                 return
                                     game.data(space.terrain).stand and
                                     (
-                                        not space.person or 
+                                        not space.person or
                                         not person.sense[space.person] or
                                         person == space.person
                                     )
@@ -835,7 +850,6 @@ _database.person_bear = {
         end
         if person ~= game.person_top(person) then
             if game.person_step_to_friend(person, dist_f) then
-                print("step to friend")
                 return
             end
         end
@@ -845,7 +859,6 @@ _database.person_bear = {
             game.person_store_wherever(person, dist_f)
         end
         if game.person_step_to_dsts(person, dist_f) then
-            print("step to interests")
             return
         end
 
@@ -858,8 +871,8 @@ _database.person_auto_sentry = {
     description = "an auto-sentry.",
     color = { 255, 255, 255 },
     character = "a",
-    sprite = { file = "resource/sprite/Monsters.png", x = 6, y = 10 },
-    sprite2 = { file = "resource/sprite/Monsters.png", x = 6, y = 11 },
+    sprite = { file = "resource/sprite/Monsters_Scifi.png", x = 7, y = 7 },
+    sprite2 = { file = "resource/sprite/Monsters_Scifi.png", x = 7, y = 8 },
     init = function (person)
         game.person_setup(person)
         person.hp = 1
@@ -886,7 +899,7 @@ _database.person_auto_sentry = {
                                 return
                                     game.data(space.terrain).stand and
                                     (
-                                        not space.person or 
+                                        not space.person or
                                         not person.sense[space.person] or
                                         person == space.person
                                     )
@@ -929,5 +942,3 @@ _database.person_blurred_photograph_image = {
         game.person_status_exit(person.person_ref, person.status_ref)
     end
 }
-
-

@@ -13,6 +13,7 @@ require("color_constants")
 require("game")
 
 generate_map = require("generate_map")
+require("act")
 require("branch")
 require("encounter")
 require("terrain")

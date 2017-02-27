@@ -83,7 +83,7 @@ local function generate_map_cave(prev, name, n)
     -- place stairs
 
     local upstairs, dnstairs = generate_aux.get_distant_spaces(vf)
-        
+
     -- place upstairs
     if _state.map.n == 1 then
         local terrain = game.data_init("terrain_stairs_up")
@@ -119,17 +119,30 @@ local function generate_map_cave(prev, name, n)
         end
     end
 
+    local encounter = _database["encounter_person_pirahna"]
+    local spaces = List.filter(
+        _state.map.spaces,
+        function (space)
+            return
+                encounter.valid(space) and
+                game.rand1() < 0.1
+        end
+    )
+    for _, space in ipairs(spaces) do
+        encounter.init(space)
+    end
+
     -- place treasures
     local treasures = _database.branch_zero[n].treasures
     for i = 1, 4 do
         local str = treasures[game.rand1(#treasures)]
         local spaces = List.filter(
             _state.map.spaces,
-            function (space) 
+            function (space)
                 return
                     game.data(space.terrain).stand and
                     not game.data(space.terrain).water and
-                    not space.dst and
+                    not space.terrain.door and
                     not space.object
             end
         )
@@ -143,4 +156,3 @@ local function generate_map(prev, name, n)
 end
 
 return generate_map
-

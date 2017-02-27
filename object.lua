@@ -108,7 +108,7 @@ _database.object_axe = {
 _database.object_spear = {
     name = "spear",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    sprite = { file = "resource/sprite/Items.png", x = 7, y = 1 },
     character = ")",
     description = "a spear.",
     pickup = true, part = "hand", stab = true,
@@ -135,7 +135,6 @@ _database.object_spear = {
                 space.x + dx,
                 space.y + dy
             )
-            print(space2.x, space2.y)
             table.insert(spaces, space2)
             for _, space in ipairs(spaces) do
                 local opponent = space.person
@@ -170,7 +169,7 @@ _database.object_spear = {
 _database.object_hammer = {
     name = "hammer",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    sprite = { file = "resource/sprite/Items.png", x = 14, y = 0 },
     character = ")",
     description = "a hammer.",
     pickup = true, part = "hand",
@@ -211,7 +210,7 @@ _database.object_hammer = {
 _database.object_bow_and_arrows = {
     name = "bow and arrows",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 2, y = 0 },
+    sprite = { file = "resource/sprite/Items.png", x = 17, y = 0 },
     character = ")",
     description = "a bow and arrows.",
     pickup = true, part = "hand",
@@ -263,9 +262,18 @@ _database.object_feather = {
     init = function (object)
         game.object_setup(object)
     end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
     use = {
         valid = function (person, object)
-            return true
+            return not object.status_charging
         end,
         range = function (person, object, space)
             return
@@ -273,6 +281,7 @@ _database.object_feather = {
                 game.space_vacant(space)
         end,
         execute = function (person, object, space)
+            game.object_discharge(object, 8)
             if game.person_sense(_state.hero, person) then
                 local str = string.format(
                     game.data(person).plural and
@@ -284,7 +293,7 @@ _database.object_feather = {
             end
             local src = person.space
             game.person_relocate(person, space)
-            
+
             local proto = game.data(person.hand)
             if proto.slash then
                 game.person_poststep_attack2(person, src)
@@ -306,9 +315,18 @@ _database.object_sprinting_shoes = {
     init = function (object)
         game.object_setup(object)
     end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
     use = {
         valid = function (person, object)
-            return true
+            return not object.status_charging
         end,
         range = function (person, object, space)
             return
@@ -331,6 +349,7 @@ _database.object_sprinting_shoes = {
                 )
                 game.print(str)
             end
+            game.object_discharge(object, 8)
             local path = Hex.line1(person.space, space)
             for i = 2, #path do
                 game.person_step(person, path[i])
@@ -343,7 +362,7 @@ _database.object_sprinting_shoes = {
 _database.object_bear_totem = {
     name = "bear totem",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 15, y = 2 },
     character = "/",
     description = "a bear totem. [use] it to summon a bear.",
     pickup = true,
@@ -360,15 +379,12 @@ _database.object_bear_totem = {
                 game.space_vacant(space)
         end,
         execute = function (person, object, space)
-            if game.person_sense(_state.hero, person) then
-                local str = string.format(
-                    game.data(person).plural and
-                        "%s summon a bear." or
-                        "%s summons a bear.",
-                    grammar.cap(grammar.the(game.data(person).name))
-                )
-                game.print(str)
-            end
+            game.print_verb1(
+                person,
+                "%s summons a bear.",
+                "%s summon a bear."
+            )
+            game.person_object_exit(person, object)
             local person2 = game.data_init("person_bear")
             game.person_enter(person2, space)
             game.person_add_friend(person, person2)
@@ -379,16 +395,25 @@ _database.object_bear_totem = {
 _database.object_fire_staff = {
     name = "fire staff",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 4, y = 1 },
     character = "/",
     description = "a fire staff. [use] it to shoot a fireball.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
     end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
     use = {
         valid = function (person, object)
-            return true
+            return not object.status_charging
         end,
         range = function (person, object, space)
             return
@@ -407,11 +432,7 @@ _database.object_fire_staff = {
                     person,
                     opponent,
                     "%s shoots a fireball at %s.",
-                    "%s shoot a fireball at %s.",
-                    "%s shoots a fireball at someone.",
-                    "%s shoot a fireball at someone.",
-                    "%s is shot by a fireball.",
-                    "%s are shot by a fireball."
+                    "%s shoot a fireball at %s."
                 )
                 game.person_damage(opponent, 1)
             else
@@ -421,6 +442,7 @@ _database.object_fire_staff = {
                     "%s shoot a fireball."
                 )
             end
+            game.object_discharge(object, 8)
             if game.data(space.terrain).burn then
                 game.terrain_exit(space.terrain)
                 local terrain = game.data_init("terrain_fire")
@@ -433,7 +455,7 @@ _database.object_fire_staff = {
 _database.object_regeneration_charm = {
     name = "regeneration charm",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 14, y = 2 },
     character = "/",
     description = "a regeneration charm. regenerate 1 extra heart per floor.",
     pickup = true,
@@ -448,7 +470,7 @@ _database.object_regeneration_charm = {
 _database.object_shovel = {
     name = "shovel",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 15, y = 4 },
     character = "/",
     description = "a shovel. [use] it to dig through stone terrain.",
     pickup = true,
@@ -478,9 +500,9 @@ _database.object_shovel = {
 }
 
 _database.object_auto_sentry = {
-    name = "shovel",
+    name = "auto-sentry",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 5, y = 12 },
     character = "/",
     description = "an auto-sentry. [use] to setup.",
     pickup = true,
@@ -502,6 +524,7 @@ _database.object_auto_sentry = {
                 "%s sets up an auto-sentry.",
                 "%s set up an auto-sentry."
             )
+            game.person_object_exit(person, object)
             local person2 = game.data_init("person_auto_sentry")
             game.person_enter(person2, space)
             game.person_add_friend(person, person2)
@@ -512,16 +535,25 @@ _database.object_auto_sentry = {
 _database.object_curious_binoculars = {
     name = "curious binoculars",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 17, y = 2 },
     character = "/",
     description = "a pair of binoculars. [use] to change places with a person.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
     end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
     use = {
         valid = function (person, object)
-            return true
+            return not object.status_charging
         end,
         range = function (person, object, space)
             return
@@ -529,6 +561,7 @@ _database.object_curious_binoculars = {
                 person.sense[space.person]
         end,
         execute = function (person, object, space)
+            game.object_discharge(object, 8)
             local opponent = space.person
             game.person_transpose(person, opponent)
         end
@@ -538,16 +571,25 @@ _database.object_curious_binoculars = {
 _database.object_blurred_photograph = {
     name = "blurred photograph",
     color = color_constants.base3,
-    sprite = { file = "resource/sprite/Items.png", x = 11, y = 10 },
+    sprite = { file = "resource/sprite/Items.png", x = 2, y = 12 },
     character = "/",
     description = "a blurred photograph. [use] to escape from life's difficulties.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
     end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
     use = {
         valid = function (person, object)
-            return true
+            return not object.status_charging
         end,
         range = function (person, object, space)
             return
@@ -560,6 +602,7 @@ _database.object_blurred_photograph = {
                 "%s uses the blurred photograph.",
                 "%s use the blurred photograph."
             )
+            game.object_discharge(object, 8)
             local status = game.data_init("status_invisible")
             game.person_status_enter(person, status)
             local src = person.space
@@ -575,6 +618,113 @@ _database.object_blurred_photograph = {
     }
 }
 
+_database.object_cuckoos_beak = {
+    name = "cuckoo's beak",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 4, y = 4 },
+    character = "/",
+    description = "an iron beak. [use] to create a sound.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
+    use = {
+        valid = function (person, object)
+            return not object.status_charging
+        end,
+        range = function (person, object, space)
+            return
+                game.space_stand(space)
+            end,
+        execute = function (person, object, space)
+            game.print_verb1(
+                person,
+                "%s uses the cuckoo's beak.",
+                "%s use the cuckoo's beak."
+            )
+            game.object_discharge(object, 8)
+            for _, person in ipairs(_state.map.persons) do
+                if person.interests then
+                    person.interests[space] = true
+                end
+            end
+        end
+    }
+}
+
+_database.object_chameleon_cloak = {
+    name = "chameleon cloak",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 9, y = 8 },
+    character = "/",
+    description = "a color-changing cloak.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    con = function (person, attacker, object)
+        return 2
+    end,
+}
+
+_database.object_pendulum = {
+    name = "pendulum",
+    color = color_constants.base3,
+    sprite = { file = "resource/sprite/Items.png", x = 10, y = 2 },
+    character = "/",
+    description = "a pendulum. [use] to put someone to sleep.",
+    pickup = true,
+    init = function (object)
+        game.object_setup(object)
+    end,
+    act = function (object)
+        game.object_act(object)
+    end,
+    person_postact = function (person, object)
+        local status = object.status_charging
+        if status then
+            game.object_status_decrement(object, status)
+        end
+    end,
+    use = {
+        valid = function (person, object)
+            return not object.status_charging
+        end,
+        range = function (person, object, space)
+            return space.person and person.sense[space.person]
+        end,
+        execute = function (person, object, space)
+            local opponent = space.person
+            if opponent then
+                game.print_verb2(
+                    person,
+                    opponent,
+                    "%s uses the pendulum on %s.",
+                    "%s use the pendulum on %s."
+                )
+                game.object_discharge(object, 8)
+                local status = game.data_init("status_sleep")
+                status.counters = 8
+                game.person_status_enter(opponent, status)
+            else
+                game.print_verb1(
+                    person,
+                    "%s uses the pendulum.",
+                    "%s use the pendulum."
+                )
+            end
+        end
+    }
+}
 
 _database.object_orb = {
     name = "The Seed of Despair",
@@ -659,7 +809,7 @@ _database.object_shortbow = {
                         return
                             game.data(space.terrain).stand and
                             (
-                                not space.person or 
+                                not space.person or
                                 not person.sense[space.person] or
                                 person == space.person
                             )
@@ -725,11 +875,10 @@ _database.object_ring_of_stealth = {
     color = color_constants.base3,
     sprite = { file = "resource/sprite/Items.png", x = 8, y = 11 },
     character = "o",
-    description = "stealth = 2",
+    description = "a ring of stealth.",
     part = "ring", pickup = true,
     init = function (object)
         game.object_setup(object)
-        object.enchant = 2
     end,
     con = function (person, attacker, object)
         if game.person_object_equipped(person, object) then
@@ -756,11 +905,10 @@ _database.object_ring_of_clairvoyance = {
     color = color_constants.base3,
     sprite = { file = "resource/sprite/Items.png", x = 8, y = 11 },
     character = "o", pickup = true,
-    description = "stealth = 2",
+    description = "a ring of clairvoyance.",
     part = "ring",
     init = function (object)
         game.object_setup(object)
-        object.enchant = 2
     end,
     person_space_sense2 = function (person, object, space)
         if game.person_object_equipped(person, object) then
@@ -917,7 +1065,7 @@ _database.object_staff_of_substitution = {
     color = { 255, 255, 255 },
     character = "/",
     sprite = { file = "resource/sprite/Items.png", x = 0, y = 1 },
-    description = "change places",
+    description = "A staff of substitution. [use] to change places with another person.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
@@ -993,7 +1141,7 @@ _database.object_charm_of_verdure = {
     color = { 255, 255, 255 },
     character = "~",
     sprite = { file = "resource/sprite/Items.png", x = 15, y = 3 },
-    description = "Lots of trees.",
+    description = "A charm of verdure. [use] to summon a forest.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
@@ -1018,7 +1166,8 @@ _database.object_charm_of_verdure = {
                 return
                     Hex.dist(person.space, space) <= 2 and
                     game.data(space.terrain).stand and
-                    not game.data(space.terrain).water
+                    not game.data(space.terrain).water and
+                    not space.terrain.door
             end
             local spaces = List.filter(_state.map.spaces, f)
             for _, space in ipairs(spaces) do
@@ -1067,7 +1216,7 @@ _database.object_potion_of_health = {
             local opponent = space.person
             if opponent then
                 game.person_undamage(opponent, 4)
-            end        
+            end
         end
     }
 }
@@ -1092,7 +1241,7 @@ _database.object_potion_of_distortion = {
             local opponent = space.person
             if opponent then
                 game.person_teleport(opponent)
-            end        
+            end
         end
     },
     throw = {
@@ -1108,7 +1257,7 @@ _database.object_potion_of_distortion = {
             local opponent = space.person
             if opponent then
                 game.person_teleport(opponent)
-            end        
+            end
         end
     }
 }
@@ -1282,7 +1431,7 @@ _database.object_potion_of_domination = {
     color = { 255, 255, 255 },
     character = "!",
     sprite = { file = "resource/sprite/Items.png", x = 0, y = 3 },
-    description = "Upon use, the user joins your party.",
+    description = "Causes a person to join your party.",
     pickup = true,
     init = function (object)
         game.object_setup(object)
@@ -1317,7 +1466,7 @@ _database.object_potion_of_domination = {
                 local status = game.data_init("status_charmed")
                 status.charmer = person
                 game.person_status_enter(opponent, status)
-            end    
+            end
         end
     }
 }
@@ -1351,4 +1500,3 @@ _database.object_blood = {
         game.object_act(object)
     end
 }
-
