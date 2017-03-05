@@ -42,6 +42,7 @@ SPRITES = {
     "resource/sprite/Interface.png",
     "resource/sprite/Items.png",
     "resource/sprite/Monsters.png",
+    "resource/sprite/Monsters_Scifi.png",
     "resource/sprite/Terrain.png",
     "resource/sprite/Terrain_Objects.png"
 }
@@ -88,7 +89,7 @@ function init_sprites()
         for x = 0, math.floor(w / 16) - 1 do
             sprites[file][x] = {}
             for y = 0, math.floor(h / 24) - 1 do
-                sprites[file][x][y] = 
+                sprites[file][x][y] =
                     love.graphics.newQuad(x * 16, y * 24, 16, 24, w, h)
             end
         end
@@ -129,6 +130,3 @@ function love.draw()
         f()
     end
 end
-
-
-

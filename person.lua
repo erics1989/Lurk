@@ -871,8 +871,8 @@ _database.person_auto_sentry = {
     description = "an auto-sentry.",
     color = { 255, 255, 255 },
     character = "a",
-    sprite = { file = "resource/sprite/Monsters_Scifi.png", x = 7, y = 7 },
-    sprite2 = { file = "resource/sprite/Monsters_Scifi.png", x = 7, y = 8 },
+    sprite = { file = "resource/sprite/Monsters_Scifi.png", x = 7, y = 6 },
+    sprite2 = { file = "resource/sprite/Monsters_Scifi.png", x = 7, y = 7 },
     init = function (person)
         game.person_setup(person)
         person.hp = 1
