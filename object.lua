@@ -844,8 +844,8 @@ _database.object_shortbow = {
                 elseif sense2 then
                     local str = string.format(
                         game.data(opponent).plural and
-                            "%s is shot by an arrow." or
-                            "%s are shot by an arrow.",
+                            "%s are shot by an arrow." or
+                            "%s is shot by an arrow.",
                         grammar.cap(grammar.the(game.data(opponent).name)
                         )
                     )
